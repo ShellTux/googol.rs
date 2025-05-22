@@ -1,0 +1,92 @@
+syntax = "proto3";
+package googol;
+
+service GatewayService {
+  rpc BroadcastIndex(BroadcastIndexRequest) returns (BroadcastIndexResponse);
+  rpc ConsultBacklinks(BacklinksRequest) returns (BacklinksResponse);
+  rpc ConsultOutlinks(OutlinksRequest) returns (OutlinksResponse);
+  rpc DequeueUrl(DequeueRequest) returns (DequeueResponse);
+  rpc EnqueueUrl(EnqueueRequest) returns (EnqueueResponse);
+  rpc Health(HealthRequest) returns (HealthResponse);
+  rpc Index(IndexRequest) returns (IndexResponse);
+  rpc RealTimeStatus(RealTimeStatusRequest) returns (RealTimeStatusResponse);
+  rpc RequestIndex(RequestIndexRequest) returns (RequestIndexResponse);
+  rpc Search(SearchRequest) returns (SearchResponse);
+  rpc Status(GatewayStatusRequest) returns (GatewayStatusResponse);
+}
+
+service BarrelService {
+  rpc ConsultBacklinks(BacklinksRequest) returns (BacklinksResponse);
+  rpc ConsultOutlinks(OutlinksRequest) returns (OutlinksResponse);
+  rpc Health(HealthRequest) returns (HealthResponse);
+  rpc Index(IndexRequest) returns (IndexResponse);
+  rpc Search(SearchRequest) returns (SearchResponse);
+  rpc Status(BarrelStatusRequest) returns (BarrelStatusResponse);
+}
+
+enum Status {
+  SUCCESS = 0;
+  ERROR = 1;
+  INVALID_URL = 2;
+  ALREADY_INDEXED_URL = 3;
+  UNAVAILABLE_BARRELS = 4;
+}
+
+message BarrelStatus {
+  string address = 1;
+  bool online = 2;
+  string index_size = 3;
+}
+
+message Index {
+  string url = 1;
+  repeated string words = 2;
+  repeated string outlinks = 3;
+}
+
+message RealTimeStatusResponse {
+  repeated string top10_searches = 1;
+  repeated BarrelStatus barrels = 2;
+  float avg_response_time_ms = 3;
+  repeated string queue = 4;
+}
+
+message BacklinksResponse {
+  Status status = 1;
+  repeated string backlinks = 2;
+}
+
+message OutlinksResponse {
+  Status status = 1;
+  repeated string outlinks = 2;
+}
+
+message EnqueueResponse {
+  Status status = 1;
+  repeated string queue = 2;
+}
+
+message SearchResponse {
+  Status status = 1;
+  repeated string urls = 2;
+}
+
+message BacklinksRequest { string url = 1; }
+message BarrelStatusRequest {}
+message BarrelStatusResponse { string status = 1; }
+message BroadcastIndexRequest { string index_json_serialized = 1; }
+message BroadcastIndexResponse { bool success = 1; }
+message DequeueRequest {}
+message DequeueResponse { string url = 1; }
+message EnqueueRequest { string url = 1; }
+message GatewayStatusRequest {}
+message GatewayStatusResponse { string status = 1; }
+message HealthRequest {}
+message HealthResponse { string status = 1; }
+message IndexRequest { Index index = 1; }
+message IndexResponse {}
+message OutlinksRequest { string url = 1; }
+message RealTimeStatusRequest {};
+message RequestIndexRequest {}
+message RequestIndexResponse { string index_json_serialized = 1; }
+message SearchRequest { repeated string words = 1; }
