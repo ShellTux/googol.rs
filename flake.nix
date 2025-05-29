@@ -108,5 +108,47 @@
           };
         }
       );
+
+      packages = forEachSupportedSystem (
+        { pkgs }: let
+          inherit (builtins) fromTOML readFile;
+          inherit (pkgs.rustPlatform) buildRustPackage;
+          inherit (pkgs.lib) getExe';
+
+          version = (fromTOML (readFile ./Cargo.toml)).package.version;
+
+          googol = buildRustPackage {
+            name = "googol";
+            src = ./.;
+            cargoLock.lockFile = ./Cargo.lock;
+
+            nativeBuildInputs = [
+              pkgs.openssl
+              pkgs.openssl.dev
+              pkgs.pkg-config
+              pkgs.protobuf
+            ];
+
+            PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig";
+            OPENSSL_NO_VENDOR = 1;
+          };
+
+          pkg-symlink = p: (let
+            target = getExe' googol "${p}";
+          in pkgs.runCommand "${p}" { } ''
+            mkdir --parents $out/bin
+            ln --symbolic ${target} $out/bin
+          '');
+        in
+        {
+          default = googol;
+
+          barrel = pkg-symlink "barrel";
+          client = pkg-symlink "client";
+          downloader = pkg-symlink "downloader";
+          gateway = pkg-symlink "gateway";
+          web-server = pkg-symlink "web-server";
+        }
+      );
     };
 }
