@@ -298,11 +298,6 @@ impl GatewayService for Gateway {
                 let mut status = self.status.lock().await;
 
                 status.response_time.update(&response_time);
-                self.status
-                    .lock()
-                    .await
-                    .response_time
-                    .update(&response_time);
 
                 self.notification.status.notify_waiters();
 
