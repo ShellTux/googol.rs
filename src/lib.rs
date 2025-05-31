@@ -1,6 +1,5 @@
 pub mod address;
 pub mod barrel;
-pub mod barrel_orchestrator;
 pub mod gateway;
 pub mod settings;
 pub mod top_searches;
