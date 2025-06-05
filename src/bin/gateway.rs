@@ -1,19 +1,29 @@
 use googol::{
+    debugv,
     gateway::Gateway,
     proto::gateway_service_server::GatewayServiceServer,
-    settings::{GoogolConfig, Load},
+    settings::{GoogolConfig, Load, gateway::GatewayConfig},
 };
-use log::{debug, info};
+use log::{debug, error, info};
 use tonic::transport::Server;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let settings = GoogolConfig::default()?.gateway;
-
     pretty_env_logger::init();
 
+    let settings = match GoogolConfig::default() {
+        Err(e) => {
+            error!("{:#?}", e);
+
+            GatewayConfig::default()?
+        }
+
+        Ok(config) => config.gateway,
+    };
+    debugv!(settings, debug);
+
     let gateway = Gateway::from(&settings).await;
-    debug!("{:#?}", gateway);
+    debugv!(gateway, debug);
 
     info!("Gateway listening at {}...", gateway.address);
     Server::builder()

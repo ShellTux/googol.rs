@@ -9,6 +9,10 @@ pub struct WebServerConfig {
 
 impl super::Load for WebServerConfig {
     type Item = Self;
+
+    fn default() -> Result<Self::Item, config::ConfigError> {
+        Self::load(".web-server")
+    }
 }
 
 #[cfg(test)]

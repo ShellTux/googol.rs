@@ -2,6 +2,7 @@ pub mod address;
 pub mod barrel;
 pub mod gateway;
 pub mod index_store;
+pub mod logger;
 pub mod page;
 pub mod serde;
 pub mod settings;

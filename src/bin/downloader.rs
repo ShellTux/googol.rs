@@ -1,8 +1,9 @@
 use googol::{
+    debugv,
     proto::{
         self, DequeueRequest, Index, IndexRequest, gateway_service_client::GatewayServiceClient,
     },
-    settings::{GoogolConfig, Load},
+    settings::{GoogolConfig, Load, downloader::DownloaderConfig},
 };
 use log::{debug, error, info, warn};
 use scraper::{Html, Selector};
@@ -142,8 +143,16 @@ impl From<url::ParseError> for HtmlError {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     pretty_env_logger::init();
 
-    let settings = GoogolConfig::default()?.downloader;
-    info!("{:?}", settings);
+    let settings = match GoogolConfig::default() {
+        Err(e) => {
+            error!("{:#?}", e);
+
+            DownloaderConfig::default()?
+        }
+
+        Ok(config) => config.downloader,
+    };
+    debugv!(settings, debug);
 
     let gateway_address = format!("http://{}", settings.gateway);
 

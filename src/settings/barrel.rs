@@ -9,6 +9,10 @@ pub struct BarrelConfig {
 
 impl super::Load for BarrelConfig {
     type Item = Self;
+
+    fn default() -> Result<Self::Item, config::ConfigError> {
+        Self::load(".barrel")
+    }
 }
 
 #[cfg(test)]

@@ -2,14 +2,14 @@ use actix_web::{App, HttpRequest, HttpServer, Responder, get, middleware, post, 
 use actix_ws::Message;
 use futures::StreamExt;
 use googol::{
-    page,
+    debugv, page,
     proto::{
         EnqueueRequest, HealthRequest, RealTimeStatusRequest, SearchRequest, Status,
         gateway_service_client::GatewayServiceClient,
     },
-    settings::{GoogolConfig, Load},
+    settings::{GoogolConfig, Load, web_server::WebServerConfig},
 };
-use log::{debug, info};
+use log::{debug, error, info};
 use serde::Deserialize;
 use serde_json::json;
 use std::net::SocketAddr;
@@ -230,8 +230,16 @@ async fn ws_handler(
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     pretty_env_logger::init();
 
-    let settings = GoogolConfig::default()?.web_server;
-    debug!("{:#?}", settings);
+    let settings = match GoogolConfig::default() {
+        Err(e) => {
+            error!("{:#?}", e);
+
+            WebServerConfig::default()?
+        }
+
+        Ok(config) => config.web_server,
+    };
+    debugv!(settings, debug);
 
     info!("Starting web-server at {}...", settings.address);
 

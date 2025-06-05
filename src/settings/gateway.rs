@@ -49,6 +49,10 @@ pub struct GatewayConfig {
 
 impl super::Load for GatewayConfig {
     type Item = Self;
+
+    fn default() -> Result<Self::Item, config::ConfigError> {
+        Self::load(".gateway")
+    }
 }
 
 #[cfg(test)]

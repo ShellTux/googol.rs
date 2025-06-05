@@ -1,5 +1,6 @@
 use clap::{Arg, Command};
 use googol::{
+    debugv,
     proto::{
         BacklinksRequest, EnqueueRequest, HealthRequest, OutlinksRequest, RealTimeStatusRequest,
         SearchRequest, gateway_service_client::GatewayServiceClient,
@@ -62,9 +63,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         Ok(config) => config.client,
     };
-    debug!("settings = {:#?}", settings);
+    debugv!(settings);
 
     let default_address = Box::leak(Box::new(format!("{}", settings.gateway)));
+    let default_max_retries = Box::leak(Box::new(settings.max_retries.to_string()));
 
     let cli = Command::new("Gateway Client")
         .version("1.0")
@@ -84,7 +86,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .long("retries")
                 .value_name("RETRIES")
                 .help("Number of retries for exponential backoff when connecting via gRPC, e.g.: 5")
-                .default_value("6"),
+                .default_value(default_max_retries.as_str()),
         )
         .subcommand(
             Command::new("enqueue").about("Enqueue a URL").arg(

@@ -4,6 +4,7 @@ use std::net::SocketAddr;
 #[derive(Debug, Deserialize)]
 pub struct ClientConfig {
     pub gateway: SocketAddr,
+    pub max_retries: usize,
 }
 
 impl super::Load for ClientConfig {

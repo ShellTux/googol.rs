@@ -1,5 +1,6 @@
 [client]
 gateway = "127.0.0.1:50051"
+max_retries = 7
 
 [gateway]
 address = "0.0.0.0:50051"

@@ -10,6 +10,10 @@ pub struct DownloaderConfig {
 
 impl super::Load for DownloaderConfig {
     type Item = Self;
+
+    fn default() -> Result<Self::Item, config::ConfigError> {
+        Self::load(".downloader")
+    }
 }
 
 #[cfg(test)]
