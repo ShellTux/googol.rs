@@ -13,3 +13,17 @@ impl super::Load for ClientConfig {
         Self::load(".client")
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::settings::Load;
+
+    use super::*;
+
+    #[test]
+    fn test_example_config() {
+        let config = ClientConfig::load("examples/config/client.toml");
+
+        assert!(config.is_ok());
+    }
+}

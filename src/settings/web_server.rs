@@ -58,4 +58,11 @@ mod tests {
             assert!(config.is_err());
         }
     }
+
+    #[test]
+    fn test_example_config() {
+        let config = WebServerConfig::load("examples/config/web-server.toml");
+
+        assert!(config.is_ok());
+    }
 }

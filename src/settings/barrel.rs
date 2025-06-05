@@ -55,4 +55,11 @@ mod tests {
             assert!(config.is_err());
         }
     }
+
+    #[test]
+    fn test_example_config() {
+        let config = BarrelConfig::load("examples/config/barrel.toml");
+
+        assert!(config.is_ok());
+    }
 }

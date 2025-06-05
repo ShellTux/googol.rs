@@ -371,7 +371,7 @@ mod tests {
     #[test]
     fn test_save_and_load() {
         let mut store = create_index_store();
-        let temp_path = "test_index_store.json";
+        let temp_path = ".test_index_store.json";
         store.filepath = path::absolute(temp_path).unwrap();
         dbg!(&store);
 
@@ -402,7 +402,7 @@ mod tests {
         assert_eq!(page.title.as_deref(), Some("Page One"));
 
         // Cleanup the temp file
-        //fs::remove_file(tmp_path).expect("Failed to delete temp file");
+        fs::remove_file(temp_path).expect("Failed to delete temp file");
     }
 
     #[test]

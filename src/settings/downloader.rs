@@ -71,4 +71,11 @@ mod tests {
             assert!(config.is_err());
         }
     }
+
+    #[test]
+    fn test_example_config() {
+        let config = DownloaderConfig::load("examples/config/downloader.toml");
+
+        assert!(config.is_ok());
+    }
 }

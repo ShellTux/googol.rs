@@ -150,4 +150,11 @@ mod tests {
             assert!(config.is_err());
         }
     }
+
+    #[test]
+    fn test_example_config() {
+        let config = GatewayConfig::load("examples/config/gateway.toml");
+
+        assert!(config.is_ok());
+    }
 }

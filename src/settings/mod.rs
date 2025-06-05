@@ -48,3 +48,15 @@ pub struct GoogolConfig {
 impl Load for GoogolConfig {
     type Item = Self;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_example_config() {
+        let config = GoogolConfig::load("example.googol.toml");
+
+        assert!(config.is_ok());
+    }
+}
