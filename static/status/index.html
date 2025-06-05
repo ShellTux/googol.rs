@@ -8,11 +8,12 @@
   </head>
   <body>
     <div id="ws-input-container">
-      <input type="text" id="ws-url" placeholder="Enter WebSocket URL" />
-      <button id="connect-btn">Connect</button>
+      <input type="text" id="web-server-address-input" placeholder="Enter WebServer Address (e.g.: 127.0.0.1:8080)" />
+      <button id="connect-button">Connect</button>
     </div>
 
     <h1>System Status Dashboard</h1>
+    <p id="connect-p">WebSocket not connected</p>
     <div id="status">
       <h2>Average Response Time ⏳: <span id="avg-response-time">Loading...</span> ms</h2>
 

@@ -1,16 +1,19 @@
 "use-strict";
 
-// Replace with your WebSocket URL
-const wsUrl = "ws://127.0.0.1:8080/ws";
-
 const elements = {
   avgResponseTimeSpan: document.getElementById('avg-response-time'),
   barrelsDiv: document.getElementById('barrels'),
+  connectButton: document.getElementById('connect-button'),
+  connectP: document.getElementById('connect-p'),
   queueUl: document.getElementById('queue'),
   top10Ol: document.getElementById('top10'),
+  webServerAddressInput: document.getElementById('web-server-address-input'),
 };
 
 console.debug(elements);
+
+/** @type{WebSocket} */
+let socket;
 
 /**
  * Connects to the WebSocket server at the specified URL.
@@ -33,7 +36,7 @@ const createSocket = (url) => {
   socket.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
-      console.log(`data = ${data}`);
+      console.log(data);
 
       // Update average response time
       if (data.avg_response_time_ms !== undefined) {
@@ -86,10 +89,24 @@ const createSocket = (url) => {
   // Optional: handle errors
   socket.onerror = (error) => {
     console.error('WebSocket error:', error);
+    elements.connectP.innerHTML = "WebSocket not connected";
   };
 
   return socket;
 };
 
+elements.connectButton.addEventListener('click', _ => {
+  elements.connectP.innerHTML = "WebSocket not connected";
 
-const socket = createSocket(wsUrl);
+  const webServerAddress = elements.webServerAddressInput.value.trim();
+  if (!webServerAddress) {
+    alert("Insert valid WebServer Address!");
+    return;
+  }
+
+  const webSocketUrl = `http://${webServerAddress}/ws`;
+  socket = createSocket(webSocketUrl);
+  console.debug(socket);
+
+  elements.connectP.innerHTML = `WebSocket connected: ${webSocketUrl}`;
+});
