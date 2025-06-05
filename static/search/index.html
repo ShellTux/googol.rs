@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Googol Search</title>
+    <link href="/search/style.css" rel="stylesheet">
+  </head>
+  <body>
+    <div class="container">
+      <h1 class="title">Googol Search</h1>
+
+      <div class="top-controls">
+        <label>
+          <input type="checkbox" id="dummy-checkbox" />
+          Dummy Results
+        </label>
+        <input type="text" id="webserver-address-input" placeholder="WebServer address (ex.: 127.0.0.1:8080) ..."/>
+      </div>
+
+      <input type="text" id="search-input" placeholder="Type your query..." />
+      <button id="search-button" type="submit">Search</button>
+      <!-- HackerNews Button -->
+      <button id="hackernews-button" title="Search Top Stories with HackerNews">
+        <span class="icon">📰</span> HackerNews
+      </button>
+      <div class="results-container" id="results-container">
+        <div id="results-count" class="results-count"></div>
+        <div id="results"></div>
+        <div id="pagination" class="pagination-controls"></div>
+      </div>
+    </div>
+    <script type="text/javascript" src="/search/script.js"></script>
+  </body>
+</html>

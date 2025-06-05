@@ -1,0 +1,192 @@
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f2f2f2;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.container {
+    background-color: #fff;
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 700px;
+    text-align: center;
+}
+
+.title {
+    font-size: 2.5em;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+#search-input {
+    width: 65%;
+    padding: 12px 20px;
+    font-size: 1em;
+    border: 1px solid #ccc;
+    border-radius: 25px;
+    outline: none;
+    transition: border 0.3s;
+}
+
+#search-input:focus {
+    border-color: #4CAF50;
+}
+
+#hackernews-button {
+    background-color: orange;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    margin-top: 10px;
+    cursor: pointer;
+    font-size: 16px;
+    display: inline-flex;
+    align-items: center;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+}
+
+#hackernews-button:hover {
+    background-color: darkorange;
+}
+
+#hackernews-button .icon {
+    margin-right: 8px;
+    font-size: 20px;
+}
+
+button {
+    padding: 12px 20px;
+    margin-left: 10px;
+    font-size: 1em;
+    border: none;
+    border-radius: 25px;
+    background-color: #4CAF50;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+.results-container {
+    max-height: 500px; /* or any height you prefer */
+    overflow-y: auto;
+    margin-top: 20px;
+    padding: 10px;
+    border: 1px solid #ddd; /* optional, for visual separation */
+    border-radius: 4px;
+}
+
+.results-count {
+    font-weight: bold;
+    margin-bottom: 10px;
+    font-size: 1.2em;
+}
+
+#results {
+    margin-top: 30px;
+    text-align: left;
+}
+
+.result {
+    margin-bottom: 20px;
+}
+
+.result-title {
+    font-size: 1.2em;
+    margin-bottom: 5px;
+}
+
+.result-title a {
+    color: #1a0dab;
+    text-decoration: none;
+}
+
+.result-title a:hover {
+    text-decoration: underline;
+}
+
+.result-description {
+    font-size: 0.95em;
+    color: #555;
+}
+
+.summarize-button {
+    margin-top: 10px;
+    padding: 8px 16px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.95em;
+    transition: background-color 0.3s;
+}
+.summarize-button:hover {
+    background-color: #0056b3;
+}
+
+/* Style the generated summary content */
+.result-summary {
+    margin-top: 10px;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.95em;
+    color: #333;
+}
+
+/* Style the pagination container */
+.pagination-controls {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+/* Style the buttons inside pagination */
+.pagination-controls button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    margin: 0 5px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.3s;
+}
+
+.pagination-controls button:hover {
+    background-color: #0056b3;
+}
+
+/* Optional: disable buttons when not applicable */
+.pagination-controls button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+.top-controls {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #fff; /* optional: background for better visibility */
+    padding: 8px;
+    border-radius: 4px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    z-index: 1000; /* ensure it's above other content */
+}

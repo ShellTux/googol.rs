@@ -8,4 +8,8 @@ pub struct ClientConfig {
 
 impl super::Load for ClientConfig {
     type Item = Self;
+
+    fn default() -> Result<Self::Item, config::ConfigError> {
+        Self::load(".client")
+    }
 }

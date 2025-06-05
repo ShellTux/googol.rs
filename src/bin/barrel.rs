@@ -8,9 +8,10 @@ use tonic::transport::Server;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let settings = GoogolConfig::default()?.barrel;
-
     pretty_env_logger::init();
+
+    let settings = GoogolConfig::default()?.barrel;
+    debug!("settings = {:#?}", settings);
 
     let barrel = Barrel::from(&settings).await;
     debug!("{:#?}", barrel);

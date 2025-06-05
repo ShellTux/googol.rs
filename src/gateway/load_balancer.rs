@@ -17,7 +17,7 @@ use super::status::ResponseTime;
 pub struct Barrel {
     pub address: Address,
     pub online: bool,
-    pub index_size: (usize, String),
+    pub index_size_bytes: usize,
 }
 
 impl Barrel {
@@ -25,7 +25,7 @@ impl Barrel {
         Self {
             address: Address::new(address),
             online: false,
-            index_size: (0, String::default()),
+            index_size_bytes: 0,
         }
     }
 
@@ -46,7 +46,7 @@ impl Barrel {
         BarrelStatus {
             address: self.address.to_string(),
             online: self.online,
-            index_size: self.index_size.1.clone(),
+            index_size_bytes: self.index_size_bytes as u64,
         }
     }
 }
@@ -58,7 +58,7 @@ pub struct LoadBalancer {
 
 #[derive(Debug)]
 pub enum LBResult<T> {
-    Ok(T, ResponseTime),
+    Ok(T, usize, ResponseTime),
     Offline(usize),
 }
 
@@ -89,9 +89,13 @@ impl LoadBalancer {
 
     pub async fn broadcast<F, T>(&mut self, mut f: F) -> LBResult<Vec<T>>
     where
-        F: FnMut(BarrelServiceClient<Channel>) -> BoxFuture<'static, Result<Response<T>, Status>>
+        F: FnMut(
+                &mut Barrel,
+                BarrelServiceClient<Channel>,
+            ) -> BoxFuture<'static, Result<Response<T>, Status>>
             + Send,
     {
+        let mut offline = 0;
         let mut responses = vec![];
         let mut avg_response = ResponseTime::default();
 
@@ -100,23 +104,25 @@ impl LoadBalancer {
 
             match barrel.connect().await {
                 Ok(client) => {
-                    if let Ok(response) = f(client).await {
+                    if let Ok(response) = f(barrel, client).await {
                         barrel.mark_success();
                         avg_response.new_sample(start_instant);
                         responses.push(response.into_inner());
                     } else {
                         barrel.mark_failure();
+                        offline += 1;
                     }
                 }
                 Err(e) => {
                     barrel.mark_failure();
                     error!("Error connecting to {}: {}", barrel.address, e);
+                    offline += 1;
                 }
             }
         }
 
         if responses.len() > 0 {
-            LBResult::Ok(responses, avg_response)
+            LBResult::Ok(responses, offline, avg_response)
         } else {
             let offline = self.barrels.len();
             LBResult::Offline(offline)
@@ -129,6 +135,7 @@ impl LoadBalancer {
             + Send,
         T: Send,
     {
+        let mut offline = 0;
         let mut avg_response = ResponseTime::default();
 
         for barrel in &mut self.barrels.iter_mut() {
@@ -139,12 +146,13 @@ impl LoadBalancer {
                     if let Ok(response) = f(client).await {
                         barrel.mark_success();
                         avg_response.new_sample(start_time);
-                        return LBResult::Ok(response.into_inner(), avg_response);
+                        return LBResult::Ok(response.into_inner(), offline, avg_response);
                     }
                 }
                 Err(e) => {
                     barrel.mark_failure();
                     error!("Error connecting to {}: {}", barrel.address, e);
+                    offline += 1;
                 }
             }
         }

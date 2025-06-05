@@ -4,11 +4,13 @@ use config::{Config, ConfigError, File, FileFormat};
 use downloader::DownloaderConfig;
 use gateway::GatewayConfig;
 use serde::{Deserialize, de::DeserializeOwned};
+use web_server::WebServerConfig;
 
 pub mod barrel;
 pub mod client;
 pub mod downloader;
 pub mod gateway;
+pub mod web_server;
 
 pub trait Load {
     type Item: DeserializeOwned;
@@ -40,6 +42,7 @@ pub struct GoogolConfig {
     pub client: ClientConfig,
     pub downloader: DownloaderConfig,
     pub gateway: GatewayConfig,
+    pub web_server: WebServerConfig,
 }
 
 impl Load for GoogolConfig {

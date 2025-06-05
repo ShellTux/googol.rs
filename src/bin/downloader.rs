@@ -1,80 +1,141 @@
-use std::{collections::HashSet, time::Duration};
-
 use googol::{
-    proto::{DequeueRequest, Index, IndexRequest, gateway_service_client::GatewayServiceClient},
+    proto::{
+        self, DequeueRequest, Index, IndexRequest, gateway_service_client::GatewayServiceClient,
+    },
     settings::{GoogolConfig, Load},
 };
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 use scraper::{Html, Selector};
+use std::{collections::HashSet, time::Duration};
 use tokio::{task::JoinSet, time::sleep};
 use tonic::Request;
+use url::Url;
 
 const MIN_BACKOFF: Duration = Duration::from_secs(1);
 const MAX_BACKOFF: Duration = Duration::from_secs(60);
 
-async fn html_get(
-    task_id: usize,
-    url: &String,
-    stop_words: &HashSet<String>,
-) -> Option<(HashSet<String>, HashSet<String>)> {
-    match reqwest::get(url).await {
-        Ok(http_response) => match http_response.text().await {
-            Ok(body) => {
-                let (links, keywords) = parse_html(&body, &stop_words);
+#[derive(Debug, Clone)]
+struct HtmlInfo {
+    url: Url,
+    words: HashSet<String>,
+    outlinks: HashSet<Url>,
+    title: Option<String>,
+    icon: Option<String>,
+}
 
-                let links = links
-                    .iter()
-                    .map(|link| format!("{}/{}", url, link))
-                    .collect();
+impl HtmlInfo {
+    pub async fn new(url_str: &str, stop_words: &HashSet<String>) -> Result<Self, HtmlError> {
+        // Parse the URL
+        let url = Url::parse(url_str).map_err(|_| HtmlError::InvalidUrl)?;
 
-                info!("[task-{}] links    = {:?}", task_id, links);
-                info!("[task-{}] keywords = {:?}", task_id, keywords);
+        // Fetch the webpage asynchronously
+        let response = reqwest::get(url.as_str()).await?;
+        let body = response.text().await?;
 
-                Some((links, keywords))
-            }
-            Err(e) => {
-                error!("[task-{}] Error parsing text: {}", task_id, e);
-                None
-            }
-        },
-        Err(e) => {
-            error!(
-                "[task-{}] Error downloading html of {}: {}",
-                task_id, url, e
-            );
-            None
+        // Parse HTML
+        let document = Html::parse_document(&body);
+
+        // Extract title
+        let title_selector = Selector::parse("title").unwrap();
+        let title = document
+            .select(&title_selector)
+            .next()
+            .map(|t| t.inner_html());
+
+        // Extract all words
+        let body_selector = Selector::parse("body").unwrap();
+        let words: HashSet<String> = match document.select(&body_selector).next() {
+            Some(body) => body
+                .text()
+                .collect::<Vec<_>>()
+                .join(" ")
+                .split_whitespace()
+                .map(|w| w.to_lowercase())
+                .filter(|w| !w.is_empty())
+                .filter(|w| !stop_words.contains(w.as_str()))
+                .filter(|w| w.chars().all(|c| c.is_alphanumeric()))
+                .collect(),
+            None => HashSet::new(),
+        };
+
+        // Extract all outlinks
+        let link_selector = Selector::parse("a").unwrap();
+        let outlinks: HashSet<Url> = document
+            .select(&link_selector)
+            .filter_map(|element| element.value().attr("href"))
+            .filter_map(|href| match url.join(href) {
+                Ok(outlink) => Some(outlink),
+                Err(e) => {
+                    error!("Error invalid join url: {}/{}: {}", url, href, e);
+
+                    None
+                }
+            })
+            .collect();
+
+        // Extract favicon URL
+        let favicon_selector =
+            Selector::parse(r#"link[rel="icon"], link[rel="shortcut icon"]"#).unwrap();
+        let favicon_url = document
+            .select(&favicon_selector)
+            .next()
+            .and_then(|link| link.value().attr("href"))
+            .and_then(|href| url.join(href).ok());
+        debug!("favicon_url = {:#?}", favicon_url);
+
+        let icon = None;
+        //let icon = match favicon_url {
+        //    // Fetch favicon bytes
+        //    Some(favicon_url) => match reqwest::get(favicon_url.as_str()).await {
+        //        Ok(resp) => match resp.bytes().await {
+        //            Ok(bytes) => Some(general_purpose::STANDARD.encode(bytes)),
+        //            Err(_) => None,
+        //        },
+        //        Err(_) => None,
+        //    },
+        //    None => None,
+        //};
+
+        Ok(Self {
+            url,
+            words,
+            outlinks,
+            title,
+            icon,
+        })
+    }
+}
+
+impl Into<proto::Page> for HtmlInfo {
+    fn into(self) -> proto::Page {
+        proto::Page {
+            url: self.url.to_string(),
+            title: self.title.unwrap_or(String::from("")),
+            summary: String::from(""),
+            icon: self.icon.unwrap_or(String::from("")),
         }
     }
 }
 
-fn parse_html(body: &str, stop_words: &HashSet<String>) -> (HashSet<String>, HashSet<String>) {
-    let document = Html::parse_document(body);
+#[derive(Debug)]
+#[allow(dead_code)]
+enum HtmlError {
+    InvalidUrl,
+    ReqwestError(reqwest::Error),
+    UrlParseError(url::ParseError),
+    MissingTitle,
+}
 
-    let link_selector = Selector::parse("a").unwrap();
-    let links: HashSet<String> = document
-        .select(&link_selector)
-        .filter_map(|element| element.value().attr("href"))
-        .map(|href| href.to_string())
-        .collect();
+impl From<reqwest::Error> for HtmlError {
+    fn from(err: reqwest::Error) -> Self {
+        HtmlError::ReqwestError(err)
+    }
+}
 
-    let p_selector = Selector::parse("p").unwrap();
-    let keywords: HashSet<String> = document
-        .select(&p_selector)
-        .flat_map(|paragraph| {
-            paragraph
-                .text()
-                .map(|text| text.split_whitespace())
-                .flatten()
-        })
-        .map(|word| {
-            word.to_lowercase()
-                .trim_matches(|c: char| !c.is_alphanumeric())
-                .to_string()
-        })
-        .filter(|word| !word.is_empty() && !stop_words.contains(word.as_str()))
-        .collect();
-
-    (links, keywords)
+impl From<url::ParseError> for HtmlError {
+    fn from(err: url::ParseError) -> Self {
+        HtmlError::UrlParseError(err)
+    }
 }
 
 #[tokio::main]
@@ -84,17 +145,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let settings = GoogolConfig::default()?.downloader;
     info!("{:?}", settings);
 
-    let barrel_orchestrator_address = format!("http://{}", settings.gateway);
+    let gateway_address = format!("http://{}", settings.gateway);
 
-    info!(
-        "Connecting to barrel orchestrator: {}...",
-        &barrel_orchestrator_address
-    );
+    info!("Connecting to gateway: {}...", &gateway_address);
 
     let mut join_set = JoinSet::new();
 
     for task_id in 1..=settings.threads {
-        let address = barrel_orchestrator_address.clone();
+        let address = gateway_address.clone();
         let stop_words = settings.stop_words.clone();
 
         join_set.spawn(async move {
@@ -118,25 +176,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                                 let response = response.into_inner();
 
-                                match html_get(task_id, &response.url, &stop_words).await {
-                                    None => todo!(),
-                                    Some((outlinks, words)) => {
-                                        let url = response.url;
-                                        let words = words.into_iter().collect();
-                                        let outlinks = outlinks.into_iter().collect();
+                                match HtmlInfo::new(&response.url, &stop_words).await {
+                                    Ok(html_info) => {
+                                        debug!("html_info = {:#?}", html_info);
 
-                                        let index = Some(Index {
-                                            url,
-                                            words,
-                                            outlinks,
-                                        });
+                                        let page = Some(html_info.clone().into());
+
+                                        let words: Vec<String> = html_info.words.iter().cloned().collect();
+                                        let outlinks: Vec<String> = html_info.outlinks.iter().cloned().map(|outlink| outlink.to_string()).collect();
+
+                                        let index = Some(Index { page, words, outlinks });
+                                        debug!("index = {:#?}", index);
 
                                         client
                                             .index(Request::new(IndexRequest { index }))
                                             .await
                                             .unwrap();
+
                                         true
-                                    }
+                                    },
+                                    Err(_) => todo!(),
                                 }
                             }
                         }

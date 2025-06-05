@@ -14,13 +14,14 @@ use crate::{
 };
 use load_balancer::LBResult;
 use log::{debug, error};
+use queue::Queue;
 use status::GatewayStatus;
-use std::collections::VecDeque;
 use tokio::sync::{Mutex as AsyncMutex, Notify};
 use tonic::{Request, Response, Status};
 use url::Url;
 
 pub mod load_balancer;
+pub mod queue;
 pub mod status;
 
 #[derive(Debug, Default)]
@@ -33,7 +34,7 @@ pub struct Notification {
 #[derive(Debug, Default)]
 pub struct Gateway {
     pub address: Address,
-    pub queue: AsyncMutex<VecDeque<Url>>,
+    pub queue: AsyncMutex<Queue>,
     pub load_balancer: AsyncMutex<LoadBalancer>,
     pub status: AsyncMutex<GatewayStatus>,
     pub notification: Notification,
@@ -41,44 +42,32 @@ pub struct Gateway {
 }
 
 impl Gateway {
-    pub async fn from(config: &GatewayConfig) -> Self {
-        let mut gateway = Gateway::default();
-        gateway.address = Address::new(config.address);
-        *gateway.load_balancer.lock().await = LoadBalancer::new(&config.barrels);
-        gateway
+    pub fn create() -> Self {
+        Self::default()
     }
 
-    #[allow(private_interfaces)]
-    pub async fn enqueue<I>(&self, urls: I) -> (GoogolStatus, Vec<String>)
-    where
-        I: IntoIterator<Item = Url>,
-    {
-        let mut queue = self.queue.lock().await;
-        let mut new_urls = 0;
+    pub fn with_address(mut self, address: Address) -> Self {
+        self.address = address;
+        self
+    }
 
-        for url in urls {
-            if queue.contains(&url) {
-                continue;
-            }
+    pub async fn with_load_balancer(self, lb: LoadBalancer) -> Self {
+        *self.load_balancer.lock().await = lb;
+        self
+    }
 
-            queue.push_back(url.clone());
-            new_urls += 1;
-        }
+    pub async fn with_queue(self, queue: Queue) -> Self {
+        *self.queue.lock().await = queue;
+        self
+    }
 
-        if new_urls > 0 {
-            self.notification.queue.notify_one();
-            self.notification.status.notify_waiters();
-        }
-
-        let queue_vec = queue.iter().map(|url| url.to_string()).collect();
-
-        let status = if new_urls > 0 {
-            GoogolStatus::AlreadyIndexedUrl
-        } else {
-            GoogolStatus::Success
-        };
-
-        (status, queue_vec)
+    pub async fn from(config: &GatewayConfig) -> Self {
+        Self::create()
+            .with_address(Address::new(config.address))
+            .with_load_balancer(LoadBalancer::new(&config.barrels))
+            .await
+            .with_queue(Queue::create().with_domains_filter(&config.domains_filter))
+            .await
     }
 }
 
@@ -111,7 +100,7 @@ impl GatewayService for Gateway {
             })
             .await
         {
-            LBResult::Ok(response, _) => (response.status, response.backlinks),
+            LBResult::Ok(response, _, _) => (response.status, response.backlinks),
             LBResult::Offline(_) => (GoogolStatus::UnavailableBarrels as i32, vec![]),
         };
 
@@ -136,7 +125,7 @@ impl GatewayService for Gateway {
             })
             .await
         {
-            LBResult::Ok(response, _) => (response.status, response.outlinks),
+            LBResult::Ok(response, _, _) => (response.status, response.outlinks),
             LBResult::Offline(_) => (GoogolStatus::UnavailableBarrels as i32, vec![]),
         };
 
@@ -150,7 +139,7 @@ impl GatewayService for Gateway {
         debug!("{:#?}", request);
 
         let url = loop {
-            if let Some(url) = self.queue.lock().await.pop_front() {
+            if let Some(url) = self.queue.lock().await.dequeue() {
                 break url;
             }
 
@@ -176,8 +165,12 @@ impl GatewayService for Gateway {
                 error!("Invalid url: `{}`: {}", &request.url, e);
                 (GoogolStatus::InvalidUrl, vec![])
             }
-            Ok(url) => self.enqueue([url]).await,
+            Ok(url) => self.queue.lock().await.enqueue(url),
         };
+
+        if status == GoogolStatus::Success {
+            self.notification.status.notify_waiters();
+        }
 
         let status = status as i32;
 
@@ -203,31 +196,44 @@ impl GatewayService for Gateway {
 
         let request = request.into_inner();
 
-        if let Some(index) = request.index.clone() {
-            self.enqueue(index.outlinks.iter().map(|url| Url::parse(url).unwrap()))
-                .await;
+        if let Some(index) = &request.index {
+            let mut queue = self.queue.lock().await;
+
+            for url in index.outlinks.iter().map(|url| Url::parse(url).unwrap()) {
+                queue.enqueue(url);
+            }
         }
 
-        let offline = match self
+        let online = match self
             .load_balancer
             .lock()
             .await
-            .broadcast(|mut client| {
+            .broadcast(|_, mut client| {
                 let request = request.clone();
 
-                Box::pin(async move { client.index(request).await })
+                Box::pin(async move {
+                    let response = client.index(request).await;
+
+                    //if let Ok(response) = response {
+                    //    let response = response.into_inner();
+                    //
+                    //    barrel.index_size_bytes = response.size_bytes as usize;
+                    //}
+
+                    response
+                })
             })
             .await
         {
-            LBResult::Ok(_, _) => 0,
-            LBResult::Offline(offline) => offline,
+            LBResult::Ok(responses, _, _) => responses.len(),
+            LBResult::Offline(_) => 0,
         };
 
-        if offline > 0 {
+        if online == 0 {
             // TODO: Caching to send index later to barrels
         }
 
-        Ok(Response::new(IndexResponse {}))
+        Ok(Response::new(IndexResponse { size_bytes: 0 }))
     }
 
     async fn real_time_status(
@@ -240,13 +246,7 @@ impl GatewayService for Gateway {
 
         let barrels = self.load_balancer.lock().await.get_barrels_status();
 
-        let queue = self
-            .queue
-            .lock()
-            .await
-            .iter()
-            .map(|url| url.to_string())
-            .collect();
+        let queue = self.queue.lock().await.into_vec();
 
         let status = self.status.lock().await;
 
@@ -256,7 +256,8 @@ impl GatewayService for Gateway {
             .top_searches
             .top_n(10)
             .iter()
-            .map(move |(word, _)| word.clone())
+            .map(|(word, _)| word)
+            .cloned()
             .collect();
 
         Ok(Response::new(RealTimeStatusResponse {
@@ -284,7 +285,7 @@ impl GatewayService for Gateway {
 
         let request = request.into_inner();
 
-        let (status, urls) = match self
+        let (status, pages) = match self
             .load_balancer
             .lock()
             .await
@@ -294,19 +295,19 @@ impl GatewayService for Gateway {
             })
             .await
         {
-            LBResult::Ok(response, response_time) => {
+            LBResult::Ok(response, _, response_time) => {
                 let mut status = self.status.lock().await;
 
                 status.response_time.update(&response_time);
 
                 self.notification.status.notify_waiters();
 
-                (response.status, response.urls)
+                (response.status, response.pages)
             }
             LBResult::Offline(_) => (GoogolStatus::UnavailableBarrels as i32, vec![]),
         };
 
-        Ok(Response::new(SearchResponse { status, urls }))
+        Ok(Response::new(SearchResponse { status, pages }))
     }
 
     async fn status(

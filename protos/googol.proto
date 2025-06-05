@@ -32,14 +32,21 @@ enum Status {
   UNAVAILABLE_BARRELS = 4;
 }
 
+message Page {
+  string url = 1;
+  string title = 2;
+  string summary = 3;
+  string icon = 4;
+}
+
 message BarrelStatus {
   string address = 1;
   bool online = 2;
-  string index_size = 3;
+  fixed64 index_size_bytes = 3;
 }
 
 message Index {
-  string url = 1;
+  Page page = 1;
   repeated string words = 2;
   repeated string outlinks = 3;
 }
@@ -68,7 +75,7 @@ message EnqueueResponse {
 
 message SearchResponse {
   Status status = 1;
-  repeated string urls = 2;
+  repeated Page pages = 2;
 }
 
 message BacklinksRequest { string url = 1; }
@@ -84,7 +91,7 @@ message GatewayStatusResponse { string status = 1; }
 message HealthRequest {}
 message HealthResponse { string status = 1; }
 message IndexRequest { Index index = 1; }
-message IndexResponse {}
+message IndexResponse { fixed64 size_bytes = 1; }
 message OutlinksRequest { string url = 1; }
 message RealTimeStatusRequest {};
 message RequestIndexRequest {}

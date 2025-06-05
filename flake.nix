@@ -89,6 +89,7 @@
               pkgs.pandoc-include
               pkgs.texliveFull
             ] ++ [
+              pkgs.curlie
               pkgs.entr
               pkgs.jq
               pkgs.simple-http-server
@@ -99,7 +100,7 @@
             env = {
               # Required by rust-analyzer
               RUST_SRC_PATH = "${rustLibSrc}";
-              RUST_LOG = "debug,h2=error,tower=error,hyper_util=error";
+              RUST_LOG = "debug,h2=error,tower=error,hyper_util=error,html5ever=error,selectors=error";
             };
 
             shellHook = ''
@@ -112,6 +113,7 @@
       packages = forEachSupportedSystem (
         { pkgs }: let
           inherit (builtins) fromTOML readFile;
+          inherit (pkgs) callPackage;
           inherit (pkgs.rustPlatform) buildRustPackage;
           inherit (pkgs.lib) getExe';
 
@@ -148,6 +150,8 @@
           downloader = pkg-symlink "downloader";
           gateway = pkg-symlink "gateway";
           web-server = pkg-symlink "web-server";
+
+          spawn-googol = callPackage ./spawn-googol { };
         }
       );
     };

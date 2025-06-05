@@ -200,8 +200,21 @@ If the gateway is offline the downloaders keep trying with exponential backoff.
 
 ## Webserver
 
-API:
+Endpoints:
 
+- /
+  - GET
+- /health
+  - GET
+- /enqueue
+  - POST
+  - json { url: String }
+- /search
+  - GET
+  - Query Params Url encoded. example: `curl address/search?words=vitae`
+- /ws
+  - GET
+  - header must include WebSocket Upgrade
 
 ## Testing
 
