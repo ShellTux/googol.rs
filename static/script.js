@@ -1,3 +1,5 @@
+"use-strict";
+
 const elements = {
   indexButton: document.getElementById('index-button'),
   indexInput: document.getElementById('index-input'),
