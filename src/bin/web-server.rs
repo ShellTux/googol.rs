@@ -18,8 +18,11 @@ use tonic::{
     transport::{Channel, Error},
 };
 
-async fn get_grpc_client() -> Result<GatewayServiceClient<Channel>, Error> {
-    GatewayServiceClient::connect("http://127.0.0.1:50051").await
+async fn get_grpc_client(
+    gateway_address: SocketAddr,
+) -> Result<GatewayServiceClient<Channel>, Error> {
+    let gateway_address = format!("http://{}", gateway_address);
+    GatewayServiceClient::connect(gateway_address).await
 }
 
 #[get("/")]
@@ -30,8 +33,10 @@ async fn index(req: HttpRequest) -> &'static str {
 }
 
 #[get("/health")]
-async fn health_handler() -> impl Responder {
-    web::Json(match get_grpc_client().await {
+async fn health_handler(gateway_address: web::Data<SocketAddr>) -> impl Responder {
+    let gateway_address = *gateway_address.into_inner();
+
+    web::Json(match get_grpc_client(gateway_address).await {
         Err(e) => json!({"error": e.to_string()}),
         Ok(mut client) => match client.health(Request::new(HealthRequest {})).await {
             Err(e) => json!({"error": e.to_string()}),
@@ -46,10 +51,15 @@ struct EnqueueInput {
 }
 
 #[post("/enqueue")]
-async fn enqueue_handler(item: web::Json<EnqueueInput>) -> impl Responder {
-    debug!("{:#?}", item);
+async fn enqueue_handler(
+    gateway_address: web::Data<SocketAddr>,
+    item: web::Json<EnqueueInput>,
+) -> impl Responder {
+    debugv!(item);
 
-    web::Json(match get_grpc_client().await {
+    let gateway_address = *gateway_address.into_inner();
+
+    let json = web::Json(match get_grpc_client(gateway_address).await {
         Err(e) => json!({"error": e.to_string()}),
         Ok(mut client) => {
             let request = Request::new(EnqueueRequest {
@@ -61,7 +71,10 @@ async fn enqueue_handler(item: web::Json<EnqueueInput>) -> impl Responder {
                 Ok(_) => json!({"message": "Enqueued"}),
             }
         }
-    })
+    });
+    debugv!(json);
+
+    json
 }
 
 #[derive(Debug, Deserialize)]
@@ -76,9 +89,12 @@ struct SearchParams {
 
 #[get("/search")]
 async fn search_handler(
+    gateway_address: web::Data<SocketAddr>,
     input: web::Either<web::Json<SearchBody>, web::Query<SearchParams>>,
 ) -> impl Responder {
-    debug!("{:#?}", input);
+    debugv!(input, debug);
+
+    let gateway_address = *gateway_address.into_inner();
 
     let words = match input {
         web::Either::Left(json) => json.into_inner().words,
@@ -90,10 +106,9 @@ async fn search_handler(
             .map(|word| word.to_string())
             .collect(),
     };
+    debugv!(words);
 
-    debug!("{:#?}", words);
-
-    web::Json(match get_grpc_client().await {
+    let json = web::Json(match get_grpc_client(gateway_address).await {
         Err(e) => json!({"error": e.to_string()}),
         Ok(mut client) => {
             let request = SearchRequest { words };
@@ -121,7 +136,10 @@ async fn search_handler(
                 }
             }
         }
-    })
+    });
+    debugv!(json);
+
+    json
 }
 
 #[derive(Debug, Clone, Deserialize, Hash, Eq, PartialEq)]
@@ -146,9 +164,9 @@ async fn ws_handler(
     req: HttpRequest,
     body: web::Payload,
 ) -> actix_web::Result<impl Responder> {
-    let gateway_address = format!("http://{}", *gateway_address.into_inner().clone());
+    debugv!(req);
 
-    debug!("gateway_address = {:#?}", gateway_address);
+    let gateway_address = *gateway_address.into_inner();
 
     let (response, mut session, mut msg_stream) = actix_ws::handle(&req, body)?;
 
@@ -173,9 +191,7 @@ async fn ws_handler(
                                 match topic {
                                     Topic::Status => {
                                         let mut client =
-                                            GatewayServiceClient::connect(gateway_address)
-                                                .await
-                                                .unwrap();
+                                            get_grpc_client(gateway_address).await.unwrap();
 
                                         loop {
                                             let request = Request::new(RealTimeStatusRequest {});
