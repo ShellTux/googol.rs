@@ -54,15 +54,14 @@ const getResults = async words => {
     ];
   }
 
-  const webServerUrl = elements.webServerAddressInput.value.length > 0
-    ? elements.webServerAddressInput.value
-    : '127.0.0.1:8080';
-
-  const searchEndpoint = `http://${webServerUrl}/search?words=${words.concat(',')}`;
-  // console.debug('searchEndpoint', searchEndpoint);
+  const webServerAddress = elements.webServerAddressInput.value.trim();
+  if (!webServerAddress) {
+    alert("Insert a valid WebServer address!");
+    return [];
+  }
 
   /** @type {Page[]} */
-  const results = await fetch(searchEndpoint)
+  const results = await fetch(`http://${webServerAddress}/search?words=${words.concat(',')}`)
     .then(response => {
       if (!response.ok) {
         // Handle HTTP errors
