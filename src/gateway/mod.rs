@@ -299,6 +299,9 @@ impl GatewayService for Gateway {
                 let mut status = self.status.lock().await;
 
                 status.response_time.update(&response_time);
+                for word in &request.words {
+                    status.top_searches.add_search(word);
+                }
 
                 self.notification.status.notify_waiters();
 
