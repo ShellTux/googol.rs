@@ -28,32 +28,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - uses: cachix/install-nix-action@v31
-        with:
-          nix_path: nixpkgs=channel:nixos-unstable
-
-      - run: nix develop .#github-ci
-
-      - name: Install protoc
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y protobuf-compiler
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Configure cache
-        uses: Swatinem/rust-cache@v2
-
       - name: Setup pages
         id: pages
         uses: actions/configure-pages@v5
 
-      - name: Clean docs folder
-        run: cargo clean --doc
+      - name: Generate Rust docs
+        uses: workflow/nix-shell-action@v3
+        with:
+          flakes: .#github-ci
+          script: |
+            # Clean docs folder
+            cargo clean --doc
 
-      - name: Build docs
-        run: cargo doc --no-deps --document-private-items --examples --lib
+            # Build docs
+            cargo doc --no-deps --document-private-items --examples --lib
 
       - name: Add redirect
         run: echo '<meta http-equiv="refresh" content="0;url=aoc/index.html">' > target/doc/index.html

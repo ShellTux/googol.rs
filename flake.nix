@@ -147,6 +147,7 @@
             env = {
               # Required by rust-analyzer
               RUST_SRC_PATH = "${rustLibSrc}";
+              CARGO_TERM_COLOR = "always";
             };
           };
         }
