@@ -1,3 +1,4 @@
+use super::status::ResponseTime;
 use crate::{
     address::Address,
     proto::{BarrelStatus, barrel_service_client::BarrelServiceClient},
@@ -10,8 +11,6 @@ use tonic::{
     Response, Status,
     transport::{Channel, Error},
 };
-
-use super::status::ResponseTime;
 
 #[derive(Debug, Default)]
 pub struct Barrel {

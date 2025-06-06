@@ -1,3 +1,9 @@
+//! # Gateway Module
+//!
+//! This module defines the `Gateway` struct and its associated implementation, providing
+//! a gRPC service for managing web crawling and indexing operations. It interacts with
+//! load balancers, queues, and maintains status to facilitate distributed crawling.
+
 use crate::{
     GoogolStatus,
     address::Address,
@@ -24,43 +30,136 @@ pub mod load_balancer;
 pub mod queue;
 pub mod status;
 
+/// Represents notifications used for signaling status changes and queue updates.
 #[derive(Debug, Default)]
-/// Notification
+/// Notification signals for the Gateway.
 pub struct Notification {
+    /// Notifies when the status has changed.
     pub status: Notify,
+    /// Notifies when the queue has new items.
     pub queue: Notify,
 }
 
 #[derive(Debug, Default)]
+/// The main Gateway struct implementing the gRPC service for crawling operations.
+/// Gateway handles crawling, indexing, and status reporting.
 pub struct Gateway {
+    /// The address of this gateway instance.
     pub address: Address,
+    /// Queue managing URLs to crawl.
     pub queue: AsyncMutex<Queue>,
+    /// Load balancer managing connections to barrels.
     pub load_balancer: AsyncMutex<LoadBalancer>,
+    /// Current status of the gateway.
     pub status: AsyncMutex<GatewayStatus>,
+    /// Notifications for status and queue updates.
     pub notification: Notification,
-    // TODO: Add caching
+    // TODO: Add caching mechanisms.
 }
 
 impl Gateway {
+    /// Creates a new Gateway instance with default values.
+    ///
+    /// # Returns
+    /// A new `Gateway`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use googol::gateway::Gateway;
+    ///
+    /// let gw = Gateway::create();
+    /// ```
     pub fn create() -> Self {
         Self::default()
     }
 
+    /// Sets the address for the Gateway.
+    ///
+    /// # Arguments
+    /// * `address` - The `Address` to assign.
+    ///
+    /// # Returns
+    /// The updated `Gateway` instance.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use googol::{address:: Address, gateway::Gateway};
+    ///
+    /// let addr = Address::new("127.0.0.1:8080".parse().unwrap());
+    /// let gw = Gateway::create().with_address(addr);
+    /// ```
     pub fn with_address(mut self, address: Address) -> Self {
         self.address = address;
         self
     }
 
+    /// Sets the load balancer for the Gateway asynchronously.
+    ///
+    /// # Arguments
+    /// * `lb` - The `LoadBalancer` instance.
+    ///
+    /// # Returns
+    /// The updated `Gateway`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use googol::gateway::{Gateway, load_balancer::LoadBalancer};
+    /// use std::collections::HashSet;
+    ///
+    /// let lb = LoadBalancer::new(&["127.0.0.1:50052"].iter().map(|a| a.parse().unwrap()).collect());
+    /// let gw = Gateway::create().with_load_balancer(lb);
+    /// ```
     pub async fn with_load_balancer(self, lb: LoadBalancer) -> Self {
         *self.load_balancer.lock().await = lb;
         self
     }
 
+    /// Sets the URL queue for the Gateway asynchronously.
+    ///
+    /// # Arguments
+    /// * `queue` - The `Queue` instance.
+    ///
+    /// # Returns
+    /// The updated `Gateway`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use googol::gateway::{Gateway, queue::Queue};
+    ///
+    /// let queue = Queue::create();
+    /// let gw = Gateway::create().with_queue(queue);
+    /// ```
     pub async fn with_queue(self, queue: Queue) -> Self {
         *self.queue.lock().await = queue;
         self
     }
 
+    /// Creates a Gateway from a configuration.
+    ///
+    /// # Arguments
+    /// * `config` - Reference to `GatewayConfig`.
+    ///
+    /// # Returns
+    /// A `Gateway` instance configured accordingly.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use googol::{settings::gateway::{GatewayConfig, DomainsFilter}, gateway::Gateway, address::Address};
+    /// use std::collections::VecDeque;
+    ///
+    /// let config = GatewayConfig {
+    ///     address: "127.0.0.1:8080".parse().unwrap(),
+    ///     queue: VecDeque::new(),
+    ///     barrels: ["127.0.0.1:50052"].iter().map(|a| a.parse().unwrap()).collect(),
+    ///     domains_filter: DomainsFilter::default(),
+    /// };
+    /// let gw = Gateway::from(&config);
+    /// ```
     pub async fn from(config: &GatewayConfig) -> Self {
         Self::create()
             .with_address(Address::new(config.address))
@@ -71,8 +170,16 @@ impl Gateway {
     }
 }
 
+/// Implementation of the gRPC GatewayService trait for the Gateway.
 #[tonic::async_trait]
 impl GatewayService for Gateway {
+    /// Handles broadcasting an index to barrels.
+    ///
+    /// # Arguments
+    /// * `request` - The gRPC request containing `BroadcastIndexRequest`.
+    ///
+    /// # Returns
+    /// A response with `BroadcastIndexResponse`.
     async fn broadcast_index(
         &self,
         request: Request<BroadcastIndexRequest>,
@@ -82,6 +189,13 @@ impl GatewayService for Gateway {
         unimplemented!()
     }
 
+    /// Consults backlinks from the load balancer.
+    ///
+    /// # Arguments
+    /// * `request` - The gRPC request containing `BacklinksRequest`.
+    ///
+    /// # Returns
+    /// A response with `BacklinksResponse`.
     async fn consult_backlinks(
         &self,
         request: Request<BacklinksRequest>,
@@ -90,6 +204,7 @@ impl GatewayService for Gateway {
 
         let request = request.into_inner();
 
+        // Send request to load balancer, retrying until success or offline.
         let (status, backlinks) = match self
             .load_balancer
             .lock()
@@ -107,6 +222,13 @@ impl GatewayService for Gateway {
         Ok(Response::new(BacklinksResponse { status, backlinks }))
     }
 
+    /// Consults outlinks from the load balancer.
+    ///
+    /// # Arguments
+    /// * `request` - The gRPC request containing `OutlinksRequest`.
+    ///
+    /// # Returns
+    /// A response with `OutlinksResponse`.
     async fn consult_outlinks(
         &self,
         request: Request<OutlinksRequest>,
@@ -132,26 +254,43 @@ impl GatewayService for Gateway {
         Ok(Response::new(OutlinksResponse { status, outlinks }))
     }
 
+    /// Dequeues a URL from the queue, waiting if necessary.
+    ///
+    /// # Arguments
+    /// * `request` - The gRPC request containing `DequeueRequest`.
+    ///
+    /// # Returns
+    /// A response with `DequeueResponse`.
     async fn dequeue_url(
         &self,
         request: Request<DequeueRequest>,
     ) -> Result<Response<DequeueResponse>, Status> {
         debug!("{:#?}", request);
 
+        // Wait until a URL is available in the queue.
         let url = loop {
             if let Some(url) = self.queue.lock().await.dequeue() {
                 break url;
             }
 
+            // Wait for notification that a URL has been enqueued.
             self.notification.queue.notified().await;
         }
         .to_string();
 
+        // Notify status listeners of queue change.
         self.notification.status.notify_waiters();
 
         Ok(Response::new(DequeueResponse { url }))
     }
 
+    /// Enqueues a URL into the queue.
+    ///
+    /// # Arguments
+    /// * `request` - The gRPC request containing `EnqueueRequest`.
+    ///
+    /// # Returns
+    /// A response with `EnqueueResponse`.
     async fn enqueue_url(
         &self,
         request: Request<EnqueueRequest>,
@@ -160,6 +299,7 @@ impl GatewayService for Gateway {
 
         let request = request.into_inner();
 
+        // Parse URL and enqueue if valid.
         let (status, queue) = match Url::parse(&request.url) {
             Err(e) => {
                 error!("Invalid url: `{}`: {}", &request.url, e);
@@ -168,6 +308,7 @@ impl GatewayService for Gateway {
             Ok(url) => self.queue.lock().await.enqueue(url),
         };
 
+        // Notify status listeners if enqueue succeeded.
         if status == GoogolStatus::Success {
             self.notification.status.notify_waiters();
         }
@@ -177,6 +318,13 @@ impl GatewayService for Gateway {
         Ok(Response::new(EnqueueResponse { status, queue }))
     }
 
+    /// Checks the health of the gateway.
+    ///
+    /// # Arguments
+    /// * `request` - The gRPC request containing `HealthRequest`.
+    ///
+    /// # Returns
+    /// A response with `HealthResponse`.
     async fn health(
         &self,
         request: Request<HealthRequest>,
@@ -188,6 +336,13 @@ impl GatewayService for Gateway {
         }))
     }
 
+    /// Performs an index operation.
+    ///
+    /// # Arguments
+    /// * `request` - The gRPC request containing `IndexRequest`.
+    ///
+    /// # Returns
+    /// A response with `IndexResponse`.
     async fn index(
         &self,
         request: Request<IndexRequest>,
@@ -196,6 +351,7 @@ impl GatewayService for Gateway {
 
         let request = request.into_inner();
 
+        // If outlinks are provided, enqueue them.
         if let Some(index) = &request.index {
             let mut queue = self.queue.lock().await;
 
@@ -204,6 +360,7 @@ impl GatewayService for Gateway {
             }
         }
 
+        // Broadcast index to barrels.
         let online = match self
             .load_balancer
             .lock()
@@ -212,6 +369,7 @@ impl GatewayService for Gateway {
                 let request = request.clone();
 
                 Box::pin(async move {
+                    // Send index request to each barrel.
                     let response = client.index(request).await;
 
                     //if let Ok(response) = response {
@@ -220,6 +378,7 @@ impl GatewayService for Gateway {
                     //    barrel.index_size_bytes = response.size_bytes as usize;
                     //}
 
+                    // Additional response handling can be added here.
                     response
                 })
             })
@@ -230,28 +389,37 @@ impl GatewayService for Gateway {
         };
 
         if online == 0 {
-            // TODO: Caching to send index later to barrels
+            // TODO: Handle caching for later index sending if all barrels are offline.
         }
 
         Ok(Response::new(IndexResponse { size_bytes: 0 }))
     }
 
+    /// Retrieves real-time status information.
+    ///
+    /// # Arguments
+    /// * `request` - The gRPC request containing `RealTimeStatusRequest`.
+    ///
+    /// # Returns
+    /// A response with `RealTimeStatusResponse`.
     async fn real_time_status(
         &self,
         request: Request<RealTimeStatusRequest>,
     ) -> Result<Response<RealTimeStatusResponse>, Status> {
         debug!("{:#?}", request);
 
+        // Wait for status update notification.
         self.notification.status.notified().await;
 
+        // Gather current system statuses.
         let barrels = self.load_balancer.lock().await.get_barrels_status();
-
         let queue = self.queue.lock().await.into_vec();
-
         let status = self.status.lock().await;
 
+        // Compute average response time.
         let avg_response_time_ms = status.response_time.miliseconds;
 
+        // Collect top 10 searches.
         let top10_searches = status
             .top_searches
             .top_n(10)
@@ -268,15 +436,29 @@ impl GatewayService for Gateway {
         }))
     }
 
+    /// Requests an index operation.
+    ///
+    /// # Arguments
+    /// * `request` - The gRPC request containing `RequestIndexRequest`.
+    ///
+    /// # Returns
+    /// A response with `RequestIndexResponse`.
     async fn request_index(
         &self,
         request: Request<RequestIndexRequest>,
     ) -> Result<Response<RequestIndexResponse>, Status> {
         debug!("{:#?}", request);
 
-        todo!()
+        unimplemented!()
     }
 
+    /// Performs a search operation.
+    ///
+    /// # Arguments
+    /// * `request` - The gRPC request containing `SearchRequest`.
+    ///
+    /// # Returns
+    /// A response with `SearchResponse`.
     async fn search(
         &self,
         request: Request<SearchRequest>,
@@ -285,6 +467,7 @@ impl GatewayService for Gateway {
 
         let request = request.into_inner();
 
+        // Send search request to load balancer.
         let (status, pages) = match self
             .load_balancer
             .lock()
@@ -298,11 +481,14 @@ impl GatewayService for Gateway {
             LBResult::Ok(response, _, response_time) => {
                 let mut status = self.status.lock().await;
 
+                // Update response time and top searches.
                 status.response_time.update(&response_time);
+
                 for word in &request.words {
                     status.top_searches.add_search(word);
                 }
 
+                // Notify waiting tasks about status update.
                 self.notification.status.notify_waiters();
 
                 (response.status, response.pages)
@@ -313,12 +499,19 @@ impl GatewayService for Gateway {
         Ok(Response::new(SearchResponse { status, pages }))
     }
 
+    /// Retrieves overall gateway status.
+    ///
+    /// # Arguments
+    /// * `request` - The gRPC request containing `GatewayStatusRequest`.
+    ///
+    /// # Returns
+    /// A response with `GatewayStatusResponse`.
     async fn status(
         &self,
         request: Request<GatewayStatusRequest>,
     ) -> Result<Response<GatewayStatusResponse>, Status> {
         debug!("{:#?}", request);
 
-        todo!()
+        unimplemented!()
     }
 }

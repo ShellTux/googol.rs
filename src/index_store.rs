@@ -1,3 +1,29 @@
+//! Manages storage, retrieval, and search of indexed web pages.
+//!
+//! Provides functions to store pages, search by keywords, and persist data to disk.
+//!
+//! # Example:
+//!
+//! ```rust
+//! use googol::{index_store::IndexStore, page::Page};
+//! use url::Url;
+//!
+//! let mut index_store = IndexStore::default();
+//! // Sample pages and their data
+//! let page1 = Page::create("https://example.com/page1").with_title("Page One");
+//! let words1 = ["rust", "programming", "language"]
+//!     .iter()
+//!     .map(|w| w.to_string())
+//!     .collect();
+//! let outlinks_for_page1 = ["https://link1.com", "https://link2.com"]
+//!     .iter()
+//!     .map(|u| Url::parse(u).unwrap())
+//!     .collect();
+//! index_store.store(&page1, &words1, &outlinks_for_page1);
+//! ```
+//!
+//! Supports loading existing index data from files.
+
 use crate::page::Page;
 use log::error;
 use serde::{Deserialize, Serialize};
@@ -7,24 +33,91 @@ use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 use url::Url;
 
+/// An index storage structure for managing web pages, their links, and search indices.
+///
+/// The `IndexStore` maintains collections of pages, their associated URLs, inverted indices for search,
+/// backlink and outlink relationships, and handles persistence to disk.
+///
+/// # Examples
+///
+/// Creating a new `IndexStore` with a specified file path:
+///
+/// ```rust
+/// use googol::index_store::IndexStore;
+///
+/// let index = IndexStore::new("index_data.json");
+/// ```
+///
+/// Loading an existing index from disk:
+///
+/// ```rust
+/// use googol::index_store::IndexStore;
+///
+/// let index_result = IndexStore::load("index_data.json");
+/// ```
+///
+/// Storing a page in the index:
+///
+/// ```rust
+/// use url::Url;
+/// use googol::{index_store::IndexStore, page::Page};
+///
+/// let mut store = IndexStore::new("index_data.json");
+/// let page = Page::create("https://example.com")
+///     .with_title("Example Page");
+/// let words = ["example", "page"].iter().map(|w| w.to_string()).collect();
+/// let outlinks = ["https://linked.com"].iter().map(|u| Url::parse(u).unwrap()).collect();
+/// store.store(&page, &words, &outlinks);
+/// ```
+///
+/// Saving the index to disk:
+///
+/// ```rust
+/// use googol::index_store::IndexStore;
+/// use std::fs;
+///
+/// let mut store = IndexStore::new("index_data.json");
+/// match store.save() {
+///     Ok(bytes) => println!("Saved {} bytes", bytes),
+///     Err(e) => println!("Error saving index: {}", e),
+/// }
+/// fs::remove_file("index_data.json").expect("Failed to delete temp file");
+/// ```
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct IndexStore {
+    /// Set of all indexed pages.
     indexed_pages: HashSet<Page>,
+    /// Map from URL to Page.
     url2pages: HashMap<Url, Page>,
 
+    /// Forward index: word (lowercase) to set of URLs containing the word.
     index: HashMap<String, HashSet<Url>>,
+    /// Inverse index: URL to set of words associated with the page.
     invert_index: HashMap<Url, HashSet<String>>,
 
+    /// Map from URL to set of URLs linking **to** the page (backlinks).
     backlinks: HashMap<Url, HashSet<Url>>,
+    /// Map from URL to set of URLs that the page links out to (outlinks).
     outlinks: HashMap<Url, HashSet<Url>>,
 
+    /// Filesystem path for storing the index data.
     #[serde(skip)]
     filepath: PathBuf,
+    /// Size of the serialized index in bytes.
     #[serde(skip)]
     size_bytes: usize,
 }
 
 impl IndexStore {
+    /// Creates a new `IndexStore` with the specified file path.
+    ///
+    /// # Arguments
+    ///
+    /// * `filepath` - Path where index data will be stored.
+    ///
+    /// # Returns
+    ///
+    /// An `IndexStore` instance with the specified filepath.
     pub fn new<P>(filepath: P) -> Self
     where
         P: AsRef<Path>,
@@ -36,6 +129,17 @@ impl IndexStore {
         index_store
     }
 
+    /// Loads an `IndexStore` from disk at the given path.
+    ///
+    /// If the file does not exist or cannot be read, it initializes a new `IndexStore`.
+    ///
+    /// # Arguments
+    ///
+    /// * `filepath` - Path to the JSON file containing serialized `IndexStore`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `io::Error` if file operations or deserialization fail.
     pub fn load<P>(filepath: P) -> Result<Self, io::Error>
     where
         P: AsRef<Path>,
@@ -63,27 +167,37 @@ impl IndexStore {
         }
     }
 
+    /// Searches for pages containing all the specified words.
+    ///
+    /// The search is case-insensitive.
+    ///
+    /// # Arguments
+    ///
+    /// * `words` - A vector of words to search for.
+    ///
+    /// # Returns
+    ///
+    /// A set of `Page` instances matching all words. Empty if no matches or input is empty.
     pub fn search(&self, words: &Vec<String>) -> HashSet<Page> {
         if words.is_empty() {
             return HashSet::new();
         }
 
-        // Collect sets of URLs for each word
-        let mut sets_of_urls: Vec<&HashSet<Url>> = Vec::new();
+        // Collect URL sets for each word (case-insensitive)
+        let sets_of_urls: Vec<&HashSet<Url>> = words
+            .iter()
+            .map(|w| w.to_lowercase())
+            .filter_map(|word| self.index.get(&word))
+            .collect();
 
-        for word in words.iter().map(|word| word.to_lowercase()) {
-            if let Some(urls) = self.index.get(&word) {
-                sets_of_urls.push(urls);
-            } else {
-                // If any word isn't found, no pages contain all words
-                return HashSet::new();
-            }
+        // If any word isn't found, no pages contain all words
+        if sets_of_urls.len() < words.len() {
+            return HashSet::new();
         }
 
-        // Find intersection of all URL sets
+        // Intersect all URL sets to find common pages
         let intersection_urls = sets_of_urls
-            .clone()
-            .into_iter()
+            .iter()
             .skip(1)
             .fold(sets_of_urls[0].clone(), |acc, set| &acc & set);
 
@@ -95,6 +209,17 @@ impl IndexStore {
             .collect()
     }
 
+    /// Searches for pages matching all words and sorts them by their backlink count (descending).
+    ///
+    /// The most backlinks (popularity) pages appear first.
+    ///
+    /// # Arguments
+    ///
+    /// * `words` - A vector of words to search for.
+    ///
+    /// # Returns
+    ///
+    /// A vector of `Page` sorted by relevance (backlink count).
     pub fn search_by_relevance(&self, words: &Vec<String>) -> Vec<Page> {
         let pages = self.search(words);
 
@@ -106,8 +231,8 @@ impl IndexStore {
             })
             .collect();
 
-        pages_with_backlinks
-            .sort_by(|(_, page_a_size), (_, page_b_size)| page_b_size.cmp(page_a_size));
+        // Sort descending by backlink count
+        pages_with_backlinks.sort_by(|(_, a_size), (_, b_size)| b_size.cmp(&a_size));
 
         pages_with_backlinks
             .into_iter()
@@ -115,6 +240,15 @@ impl IndexStore {
             .collect()
     }
 
+    /// Stores a page and its associated data into the index.
+    ///
+    /// Updates the inverted index, backlink relationships, and outlinks.
+    ///
+    /// # Arguments
+    ///
+    /// * `page` - The `Page` to store.
+    /// * `words` - Words associated with the page.
+    /// * `outlinks` - Outgoing links from the page.
     pub fn store(&mut self, page: &Page, words: &Vec<String>, outlinks: &Vec<Url>) {
         self.indexed_pages.insert(page.clone());
         self.url2pages.insert(page.url.clone(), page.clone());
@@ -144,20 +278,39 @@ impl IndexStore {
         }
     }
 
+    /// Retrieves all backlinks (pages linking to the given URL).
+    ///
+    /// # Arguments
+    ///
+    /// * `url` - The URL for which to retrieve backlinks.
+    ///
+    /// # Returns
+    ///
+    /// A set of URLs linking to the given URL. Empty if none.
     pub fn consult_backlinks(&self, url: &Url) -> HashSet<Url> {
-        match self.backlinks.get(url) {
-            Some(backlinks) => backlinks.clone(),
-            None => HashSet::new(),
-        }
+        self.backlinks.get(url).cloned().unwrap_or_default()
     }
 
+    /// Retrieves all outlinks (pages linked from the given URL).
+    ///
+    /// # Arguments
+    ///
+    /// * `url` - The URL for which to retrieve outlinks.
+    ///
+    /// # Returns
+    ///
+    /// A set of URLs that the page links to. Empty if none.
     pub fn consult_outlinks(&self, url: &Url) -> HashSet<Url> {
-        match self.outlinks.get(url) {
-            Some(outlinks) => outlinks.clone(),
-            None => HashSet::new(),
-        }
+        self.outlinks.get(url).cloned().unwrap_or_default()
     }
 
+    /// Saves the current index to disk.
+    ///
+    /// Serializes the index to JSON and writes it to the specified filepath.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `io::Error` if serialization or file writing fails.
     pub fn save(&mut self) -> Result<usize, io::Error> {
         let json = serde_json::to_string(self).map_err(|e| {
             use io::{Error, ErrorKind};
@@ -185,77 +338,84 @@ impl IndexStore {
     }
 }
 
+/// Tests for `IndexStore` functionalities.
 #[cfg(test)]
 mod tests {
-    use std::{fs, path};
+    use crate::url::parse_url_panic;
 
     use super::*;
+    use std::{collections::HashSet, fs, path};
     use url::Url;
 
+    /// Helper to create a Page with optional title.
     fn create_page(url: &str, title: Option<&str>) -> Page {
         let mut page = Page::create(url);
 
-        if let Some(title) = title {
-            page = page.with_title(title);
+        if let Some(t) = title {
+            page = page.with_title(t);
         }
 
         page
     }
 
+    /// Helper to initialize an index with sample data.
     fn create_index_store() -> IndexStore {
         let mut index_store = IndexStore::default();
 
-        let page1 = create_page("https://example.com/page1", Some("Page One"));
-        let words1 = vec!["rust", "programming", "language"]
+        // Sample pages and their data
+        let page1 = Page::create("https://example.com/page1").with_title("Page One");
+        let words1 = ["rust", "programming", "language"]
             .iter()
             .map(|w| w.to_string())
             .collect();
-        let outlinks_for_page1 = vec![
-            Url::parse("https://link1.com").unwrap(),
-            Url::parse("https://link2.com").unwrap(),
-        ];
-
+        let outlinks_for_page1 = ["https://link1.com", "https://link2.com"]
+            .iter()
+            .map(|u| Url::parse(u).unwrap())
+            .collect();
         index_store.store(&page1, &words1, &outlinks_for_page1);
 
-        let page2 = create_page("https://example.com/page2", Some("Page Two"));
-        let words2 = vec!["rust", "web"].iter().map(|w| w.to_string()).collect();
-        let outlinks_for_page2 = vec![Url::parse("https://link3.com").unwrap()];
-
+        let page2 = Page::create("https://example.com/page2").with_title("Page Two");
+        let words2 = ["rust", "web"].iter().map(|w| w.to_string()).collect();
+        let outlinks_for_page2 = ["https://link3.com"].iter().map(parse_url_panic).collect();
         index_store.store(&page2, &words2, &outlinks_for_page2);
 
-        let page3 = create_page("https://example.com/page3", Some("Page Three"));
-        let words3 = vec!["programming", "tutorial"]
+        let page3 = Page::create("https://example.com/page3").with_title("Page Three");
+        let words3 = ["programming", "tutorial"]
             .iter()
             .map(|w| w.to_string())
             .collect();
-        let outlinks_for_page3 = vec![
-            Url::parse("https://link4.com").unwrap(),
-            Url::parse("https://link5.com").unwrap(),
-            Url::parse("https://link6.com").unwrap(),
-        ];
-
+        let outlinks_for_page3 = [
+            "https://link4.com",
+            "https://link5.com",
+            "https://link6.com",
+        ]
+        .iter()
+        .map(parse_url_panic)
+        .collect();
         index_store.store(&page3, &words3, &outlinks_for_page3);
 
         // Add backlinks for testing search_by_relevance
-        // Let's assume page1 has 2 backlinks, page2 has 1, page3 has 3
         index_store.backlinks.insert(
             page1.url,
-            HashSet::from_iter([
-                Url::parse("https://link1.com").unwrap(),
-                Url::parse("https://link2.com").unwrap(),
-            ]),
+            ["https://link1.com", "https://link2.com"]
+                .iter()
+                .map(parse_url_panic)
+                .collect(),
         );
         index_store.backlinks.insert(
             page2.url,
-            HashSet::from_iter([Url::parse("https://link3.com").unwrap()]),
+            ["https://link3.com"].iter().map(parse_url_panic).collect(),
         );
         index_store.backlinks.insert(
             page3.url,
-            HashSet::from_iter([
-                Url::parse("https://link4.com").unwrap(),
-                Url::parse("https://link5.com").unwrap(),
-                Url::parse("https://link6.com").unwrap(),
-            ]),
+            [
+                "https://link4.com",
+                "https://link5.com",
+                "https://link6.com",
+            ]
+            .iter()
+            .map(parse_url_panic)
+            .collect(),
         );
 
         index_store
@@ -278,7 +438,12 @@ mod tests {
         let index_store = create_index_store();
 
         // Search for pages containing both "rust" and "programming"
-        let results = index_store.search(&vec!["rust".to_string(), "programming".to_string()]);
+        let results = index_store.search(
+            &["rust", "programming"]
+                .iter()
+                .map(|w| w.to_string())
+                .collect(),
+        );
         let urls: HashSet<_> = results.iter().map(|p| p.url.clone()).collect();
 
         assert_eq!(urls.len(), 1);
