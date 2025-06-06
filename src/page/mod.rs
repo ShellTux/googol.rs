@@ -242,9 +242,9 @@ impl Into<proto::Page> for Page {
     fn into(self) -> proto::Page {
         proto::Page {
             url: self.url.to_string(),
-            title: self.title.unwrap_or("".to_string()),
-            summary: self.summary.unwrap_or("".to_string()),
-            icon: self.icon.unwrap_or("".to_string()),
+            title: self.title.unwrap_or_default(),
+            summary: self.summary.unwrap_or_default(),
+            icon: self.icon.unwrap_or_default(),
         }
     }
 }

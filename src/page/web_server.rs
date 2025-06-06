@@ -91,9 +91,9 @@ impl Into<proto::Page> for Page {
     fn into(self) -> proto::Page {
         proto::Page {
             url: self.href,
-            title: self.title.unwrap_or(String::from("")),
-            summary: self.summary.unwrap_or(String::from("")),
-            icon: self.icon.unwrap_or(String::from("")),
+            title: self.title.unwrap_or_default(),
+            summary: self.summary.unwrap_or_default(),
+            icon: self.icon.unwrap_or_default(),
         }
     }
 }

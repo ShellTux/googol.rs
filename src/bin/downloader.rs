@@ -111,9 +111,9 @@ impl Into<proto::Page> for HtmlInfo {
     fn into(self) -> proto::Page {
         proto::Page {
             url: self.url.to_string(),
-            title: self.title.unwrap_or(String::from("")),
+            title: self.title.unwrap_or_default(),
             summary: String::from(""),
-            icon: self.icon.unwrap_or(String::from("")),
+            icon: self.icon.unwrap_or_default(),
         }
     }
 }
