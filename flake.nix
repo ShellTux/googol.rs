@@ -116,7 +116,7 @@
               pkgs.curlie
               pkgs.entr
               pkgs.jq
-              pkgs.simple-http-server
+              pkgs.python3
               pkgs.tokei
               pkgs.websocat
             ] ++ pre-commit-check.enabledPackages;
