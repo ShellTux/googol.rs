@@ -37,9 +37,9 @@ jobs:
           nix_path: nixpkgs=channel:nixos-unstable
 
       - name: Generate Rust docs
-        uses: workflow/nix-shell-action@v3
+        uses: workflow/nix-shell-action@v3.4.0
         with:
-          flakes: .#github-ci
+          flakes-from-devshell: true
           script: |
             # Clean docs folder
             cargo clean --doc
