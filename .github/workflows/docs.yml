@@ -36,16 +36,9 @@ jobs:
         with:
           nix_path: nixpkgs=channel:nixos-unstable
 
-      - name: Generate Rust docs
-        uses: workflow/nix-shell-action@v3.4.0
-        with:
-          flakes-from-devshell: true
-          script: |
-            # Clean docs folder
-            cargo clean --doc
-
-            # Build docs
-            cargo doc --no-deps --document-private-items --examples --lib
+      - name: Generate docs
+        run: |
+          .github/workflows/docs.sh
 
       - name: Add redirect
         run: echo '<meta http-equiv="refresh" content="0;url=aoc/index.html">' > target/doc/index.html
