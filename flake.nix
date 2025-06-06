@@ -132,6 +132,23 @@
               ${onefetch} --no-bots 2>/dev/null
             '';
           };
+
+          github-ci = mkShell {
+            packages = [
+              rustToolchain
+
+              pkgs.openssl
+              pkgs.pkg-config
+            ] ++ [
+              # gRPC
+              pkgs.protobuf
+            ];
+
+            env = {
+              # Required by rust-analyzer
+              RUST_SRC_PATH = "${rustLibSrc}";
+            };
+          };
         }
       );
 
