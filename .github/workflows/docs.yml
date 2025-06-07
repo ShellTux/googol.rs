@@ -40,8 +40,8 @@ jobs:
         run: |
           .github/workflows/docs.sh
 
-      - name: Add redirect
-        run: echo '<meta http-equiv="refresh" content="0;url=docs/index.html">' > target/doc/index.html
+      - name: Add main page
+        run: cp .github/workflows/index.html target/doc/index.html
 
       - name: Remove lock file
         run: rm target/doc/.lock
