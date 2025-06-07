@@ -40,16 +40,22 @@ jobs:
         run: |
           .github/workflows/docs.sh
 
-      - name: Add main page
-        run: cp .github/workflows/index.html target/doc/index.html
-
       - name: Remove lock file
         run: rm target/doc/.lock
+
+      - name: Add redirect
+        run: echo '<meta http-equiv="refresh" content="0;url=googol/index.html">' > target/doc/index.html
+
+      - name: Copy Web Pages
+        run: cp --recursive static target/web
+
+      - name: Add main page
+        run: cp .github/workflows/index.html target/index.html
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: target/doc
+          path: target
 
   deploy:
     name: Deploy
