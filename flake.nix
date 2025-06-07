@@ -116,7 +116,7 @@
               pkgs.curlie
               pkgs.entr
               pkgs.jq
-              pkgs.simple-http-server
+              pkgs.python3
               pkgs.tokei
               pkgs.websocat
             ] ++ pre-commit-check.enabledPackages;
@@ -131,6 +131,24 @@
               ${pre-commit-check.shellHook}
               ${onefetch} --no-bots 2>/dev/null
             '';
+          };
+
+          github-ci = mkShell {
+            packages = [
+              rustToolchain
+
+              pkgs.openssl
+              pkgs.pkg-config
+            ] ++ [
+              # gRPC
+              pkgs.protobuf
+            ];
+
+            env = {
+              # Required by rust-analyzer
+              RUST_SRC_PATH = "${rustLibSrc}";
+              CARGO_TERM_COLOR = "always";
+            };
           };
         }
       );

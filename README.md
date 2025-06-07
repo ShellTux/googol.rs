@@ -1,22 +1,3 @@
----
-title: Relatório de Sistemas Distríbuidos
-lang: pt-PT
-toc: true
-author:
-  - Luís Góis, nº 2018280716
-date: \today
-header-includes: |
-    \usepackage[utf8]{inputenc}
-    \usepackage{fdsymbol}
-    \usepackage{newunicodechar}
-    \usepackage[a4paper, margin=1in]{geometry}
-    \usepackage{float}
-    \usepackage{color}
-    \makeatletter
-    \def\fps@figure{H}
-    \makeatother
----
-
 # googol
 
 Search engine and web crawler written in Rust.
@@ -45,10 +26,9 @@ flowchart LR
 
 ## Services
 
-<!-- ```proto -->
-<!-- !include`snippetStart="service", snippetEnd="}", includeSnippetDelimiters=True` ./protos/googol.proto -->
-<!-- !include`snippetStart="service", snippetEnd="}", includeSnippetDelimiters=True` ./protos/googol.proto -->
-<!-- ``` -->
+```proto
+!include ./protos/googol.proto
+```
 
 Components that implement services:
 
