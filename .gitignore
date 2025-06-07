@@ -136,6 +136,8 @@ $RECYCLE.BIN/
 .*.json
 *.pdf
 *.err
+*.qcow2
 /.pre-commit-config.yaml
+/result
 
 !/Cargo.lock
