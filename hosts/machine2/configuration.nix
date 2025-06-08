@@ -1,5 +1,7 @@
 { pkgs, googol, ... }:
 {
+  boot.loader.grub.devices = [ "nodev" ];
+
   users.users.googol = {
     isNormalUser = true;
     extraGroups = [ "wheel" ]; # Enable ‘sudo’ for the user.

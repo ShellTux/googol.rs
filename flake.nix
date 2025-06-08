@@ -20,6 +20,11 @@
     };
 
     treefmt-nix.url = "github:numtide/treefmt-nix";
+
+    crane = {
+      url = "github:ipetkov/crane";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -30,6 +35,7 @@
       rust-overlay,
       pre-commit-hooks,
       treefmt-nix,
+      crane,
     }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports =
@@ -59,8 +65,11 @@
           ...
         }:
         let
-          inherit (builtins) attrValues elem;
-          inherit (pkgs.lib) getExe filterAttrs;
+          inherit (builtins)
+            attrValues
+            elem
+            ;
+          inherit (pkgs.lib) getExe filterAttrs fileset;
 
           additionalPackages = attrValues (
             filterAttrs (
@@ -70,6 +79,90 @@
                 "vm"
               ])
             ) config.packages
+          );
+
+          craneLib = crane.mkLib pkgs;
+
+          inherit (craneLib)
+            buildPackage
+            cargoDoc
+            cargoFmt
+            cargoNextest
+            ;
+
+          src = fileset.toSource {
+            root = ./.;
+            fileset = fileset.unions [
+              (craneLib.fileset.commonCargoSources ./.)
+              # (fileset.fileFilter (file: any (ext: file.hasExt ext) ["proto"]) ./.)
+              (fileset.maybeMissing ./protos)
+            ];
+          };
+
+          commonArgs = {
+            inherit src;
+            strictDeps = true;
+
+            nativeBuildInputs = [
+              pkgs.openssl
+              pkgs.openssl.dev
+              pkgs.pkg-config
+              pkgs.protobuf
+            ];
+
+            PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig";
+            OPENSSL_NO_VENDOR = 1;
+          };
+
+          cargoArtifacts = craneLib.buildDepsOnly commonArgs;
+
+          individualCrateArgs = commonArgs // {
+            inherit cargoArtifacts;
+            inherit (craneLib.crateNameFromCargoToml { inherit src; }) version;
+            # NB: we disable tests since we'll run them all via cargo-nextest
+            doCheck = false;
+          };
+
+          googol = buildPackage (commonArgs // { inherit cargoArtifacts; });
+
+          barrel = buildPackage (
+            individualCrateArgs
+            // {
+              pname = "barrel";
+              cargoExtraArgs = "--bin=barrel";
+            }
+          );
+
+          client = buildPackage (
+            individualCrateArgs
+            // {
+              pname = "client";
+              cargoExtraArgs = "--bin=client";
+            }
+          );
+
+          downloader = buildPackage (
+            individualCrateArgs
+            // {
+              pname = "downloader";
+              cargoExtraArgs = "--bin=downloader";
+            }
+          );
+
+          gateway = buildPackage (
+            individualCrateArgs
+            // {
+              pname = "gateway";
+              cargoExtraArgs = "--bin=gateway";
+            }
+          );
+
+          web-server = buildPackage (
+            individualCrateArgs
+            // {
+              pname = "web-server";
+              cargoExtraArgs = "--bin=web-server";
+            }
           );
 
           onefetch = getExe pkgs.onefetch;
@@ -90,47 +183,54 @@
           };
 
           pre-commit.settings.hooks = {
-            cargo-check.enable = true;
+            # cargo-check.enable = true;
             check-toml.enable = true;
             # clippy.enable = true;
             # nixpkgs-fmt.enable = true;
             rustfmt.enable = true;
           };
 
+          checks = {
+            inherit googol;
+
+            my-workspace-doc = cargoDoc (
+              commonArgs
+              // {
+                inherit cargoArtifacts;
+              }
+            );
+
+            my-workspace-fmt = cargoFmt {
+              inherit src;
+            };
+
+            my-workspace-nextest = cargoNextest (
+              commonArgs
+              // {
+                inherit cargoArtifacts;
+                partitions = 1;
+                partitionType = "count";
+                cargoNextestPartitionsExtraArgs = "--no-tests=pass";
+              }
+            );
+          };
+
           devShells =
             let
-              inherit (pkgs) mkShell;
               inherit (pkgs.rust.packages.stable.rustPlatform) rustLibSrc;
               inherit (config) pre-commit;
-
-              rustToolchain =
-                let
-                  rust = pkgs.rust-bin;
-                in
-                if builtins.pathExists ./rust-toolchain.toml then
-                  rust.fromRustupToolchainFile ./rust-toolchain.toml
-                else if builtins.pathExists ./rust-toolchain then
-                  rust.fromRustupToolchainFile ./rust-toolchain
-                else
-                  rust.stable.latest.default.override {
-                    extensions = [
-                      "rust-src"
-                      "rustfmt"
-                    ];
-                  };
             in
             {
-              default = mkShell {
+              default = craneLib.devShell {
                 name = "googol.nix";
 
                 packages =
                   [
-                    rustToolchain
-
                     pkgs.openssl
                     pkgs.pkg-config
                     pkgs.cargo-deny
                     pkgs.cargo-edit
+                    pkgs.cargo-nextest
                     pkgs.cargo-watch
                     pkgs.rust-analyzer
                   ]
@@ -169,13 +269,12 @@
                 '';
               };
 
-              github-ci = mkShell {
+              github-ci = craneLib.devShell {
                 packages =
                   [
-                    rustToolchain
-
                     pkgs.openssl
                     pkgs.pkg-config
+                    pkgs.cargo-nextest
                   ]
                   ++ [
                     # gRPC
@@ -190,29 +289,18 @@
               };
             };
 
-          packages.default =
-            let
-              inherit (builtins) fromTOML readFile;
-              inherit (pkgs.rustPlatform) buildRustPackage;
-              inherit ((fromTOML (readFile ./Cargo.toml)).package) name version;
+          packages = {
+            inherit
+              googol
+              client
+              gateway
+              barrel
+              downloader
+              web-server
+              ;
 
-            in
-            buildRustPackage {
-              inherit name version;
-
-              src = ./.;
-              cargoLock.lockFile = ./Cargo.lock;
-
-              nativeBuildInputs = [
-                pkgs.openssl
-                pkgs.openssl.dev
-                pkgs.pkg-config
-                pkgs.protobuf
-              ];
-
-              PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig";
-              OPENSSL_NO_VENDOR = 1;
-            };
+            default = googol;
+          };
         };
     };
 }

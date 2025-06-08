@@ -23,7 +23,7 @@ let
           nixpkgs.hostPlatform = system;
         }
         ./${name}
-      ];
+      ] ++ extraModules;
 
       specialArgs = {
         inherit inputs self;
