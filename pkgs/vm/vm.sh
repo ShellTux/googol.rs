@@ -15,7 +15,6 @@ usage() {
 [ "$#" -ne 2 ] && usage
 
 profile="$2"
-vm_bin=./result/bin/"run-$profile-vm"
 
 case "$1" in
 	dry-build)
@@ -32,15 +31,14 @@ case "$1" in
 		;;
 	run)
 		(
-			set -x;
-			nixos-rebuild build-vm --flake .#"$profile"
+			vm_bin="$(nixos-rebuild build-vm --flake .#"$profile" 2>&1 | grep --only-matching '/nix/store/\S\+')"
 			QEMU_KERNEL_PARAMS=console=ttyS0 $vm_bin -nographic; reset
 		)
 		;;
 	run-graphic)
 		(
 			set -x;
-			nixos-rebuild build-vm --flake .#"$profile"
+			vm_bin="$(nixos-rebuild build-vm --flake .#"$profile" 2>&1 | grep --only-matching '/nix/store/\S\+')"
 			$vm_bin
 		)
 		;;
