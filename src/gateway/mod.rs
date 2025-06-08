@@ -17,6 +17,7 @@ use crate::{
         gateway_service_server::GatewayService,
     },
     settings::gateway::GatewayConfig,
+    wait_for_enter,
 };
 use load_balancer::LBResult;
 use log::{debug, error};
@@ -54,6 +55,8 @@ pub struct Gateway {
     pub status: AsyncMutex<GatewayStatus>,
     /// Notifications for status and queue updates.
     pub notification: Notification,
+    /// Toggle interactive mode to wait for user input
+    pub interactive: bool,
     // TODO: Add caching mechanisms.
 }
 
@@ -135,6 +138,26 @@ impl Gateway {
     /// ```
     pub async fn with_queue(self, queue: Queue) -> Self {
         *self.queue.lock().await = queue;
+        self
+    }
+
+    /// Sets interactive flag for the Gateway.
+    ///
+    /// # Arguments
+    /// * `interactive` - The `bool` to assign.
+    ///
+    /// # Returns
+    /// The updated `Gateway` instance.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use googol::gateway::Gateway;
+    ///
+    /// let gw = Gateway::create().with_interactive(true);
+    /// ```
+    pub fn with_interactive(mut self, interactive: bool) -> Self {
+        self.interactive = interactive;
         self
     }
 
@@ -331,9 +354,15 @@ impl GatewayService for Gateway {
     ) -> Result<Response<HealthResponse>, Status> {
         debug!("{:#?}", request);
 
-        Ok(Response::new(HealthResponse {
+        let response = HealthResponse {
             status: format!("OK: Online. Listening at {}...", self.address),
-        }))
+        };
+
+        if self.interactive {
+            wait_for_enter!("Press Enter to send \x1b[32m{:#?}\x1b[0m...", &response);
+        }
+
+        Ok(Response::new(response))
     }
 
     /// Performs an index operation.
@@ -513,5 +542,21 @@ impl GatewayService for Gateway {
         debug!("{:#?}", request);
 
         unimplemented!()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_gateway_default_interactive_off() {
+        let gateway = Gateway::default();
+
+        assert_eq!(gateway.interactive, false);
+
+        let gateway = gateway.with_interactive(true);
+
+        assert_eq!(gateway.interactive, true);
     }
 }
