@@ -250,6 +250,7 @@
                   ++ [
                     pkgs.curlie
                     pkgs.entr
+                    pkgs.gnuplot
                     pkgs.jq
                     pkgs.python3
                     pkgs.tokei
