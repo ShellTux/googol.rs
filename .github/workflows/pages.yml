@@ -55,6 +55,9 @@ jobs:
       - name: Add main page
         run: cp .github/workflows/index.html target/index.html
 
+      - name: Remove garbage
+        run: find target/debug target/release -type f ! -name "*.html*" -exec rm {} +
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
