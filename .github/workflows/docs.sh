@@ -6,6 +6,3 @@ cargo clean --doc
 
 # Build docs
 cargo doc --no-deps --document-private-items --examples --lib
-
-# Build benchmarks
-cargo bench

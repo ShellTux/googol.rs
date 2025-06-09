@@ -1,4 +1,4 @@
-name: Docs
+name: Github Pages
 
 on:
   push:
@@ -39,14 +39,18 @@ jobs:
         run: |
           .github/workflows/docs.sh
 
+      - name: Generate benchmarks
+        run: |
+          .github/workflows/bench.sh
+
+      - name: Generate Web Pages
+        run: cp --recursive static target/web
+
       - name: Remove lock file
         run: rm target/doc/.lock
 
       - name: Add redirect
         run: echo '<meta http-equiv="refresh" content="0;url=googol/index.html">' > target/doc/index.html
-
-      - name: Copy Web Pages
-        run: cp --recursive static target/web
 
       - name: Add main page
         run: cp .github/workflows/index.html target/index.html
