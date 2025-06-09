@@ -248,6 +248,8 @@
                     pkgs.texliveFull
                   ]
                   ++ [
+                    pkgs.asciinema
+                    pkgs.asciinema-agg
                     pkgs.curlie
                     pkgs.entr
                     pkgs.gnuplot

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>System Status Dashboard</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="ws-input-container">
+      <input type="text" id="web-server-address-input" placeholder="Enter WebServer Address (e.g.: 127.0.0.1:8080)" />
+      <button id="connect-button">Connect</button>
+    </div>
+
+    <h1>System Status Dashboard</h1>
+    <p id="connect-p">WebSocket not connected</p>
+    <div id="status">
+      <h2>Average Response Time ⏳: <span id="avg-response-time">Loading...</span> ms</h2>
+
+      <div class="section">
+        <h3>Barrels 🫙:</h3>
+        <div id="barrels"></div>
+      </div>
+
+      <div class="section">
+        <h3>Queue:</h3>
+        <ul id="queue"></ul>
+      </div>
+
+      <div class="section">
+        <h3>Top 10 Searches 🔝:</h3>
+        <ol id="top10"></ol>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>

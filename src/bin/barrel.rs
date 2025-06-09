@@ -22,11 +22,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     debugv!(settings, debug);
 
-    let settings = BarrelConfig {
-        address: "127.0.0.1:50052".parse().unwrap(),
-        filepath: ".barrel-data.json".to_string(),
-    };
-
     let barrel = Barrel::new(&settings).await;
     debugv!(barrel, debug);
 

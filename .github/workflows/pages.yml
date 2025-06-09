@@ -44,7 +44,7 @@ jobs:
           .github/workflows/bench.sh
 
       - name: Generate Web Pages
-        run: cp --recursive static target/web
+        run: cp --recursive static/* target
 
       - name: Remove lock file
         run: rm target/doc/.lock
