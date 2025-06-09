@@ -261,7 +261,7 @@
                 env = {
                   # Required by rust-analyzer
                   RUST_SRC_PATH = "${rustLibSrc}";
-                  RUST_LOG = "debug,h2=error,tower=error,hyper_util=error,html5ever=error,selectors=error";
+                  RUST_LOG = "error,googol=debug,downloader=debug,client=debug,barrel=debug,gateway=debug,web-server=debug";
                 };
 
                 shellHook = ''
