@@ -6,6 +6,7 @@
 
 pub mod address;
 pub mod barrel;
+pub mod fishfish;
 pub mod gateway;
 pub mod index_store;
 pub mod interactive;

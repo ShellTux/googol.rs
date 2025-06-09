@@ -1,5 +1,6 @@
 use googol::{
     debugv,
+    fishfish::{FishFish, domain::category::FishDomainCategory},
     proto::{
         self, DequeueRequest, Index, IndexRequest, gateway_service_client::GatewayServiceClient,
     },
@@ -7,8 +8,8 @@ use googol::{
 };
 use log::{debug, error, info, warn};
 use scraper::{Html, Selector};
-use std::{collections::HashSet, time::Duration};
-use tokio::{task::JoinSet, time::sleep};
+use std::{collections::HashSet, sync::Arc, time::Duration};
+use tokio::{sync::RwLock, task::JoinSet, time::sleep};
 use tonic::Request;
 use url::Url;
 
@@ -22,6 +23,7 @@ struct HtmlInfo {
     outlinks: HashSet<Url>,
     title: Option<String>,
     icon: Option<String>,
+    category: Option<FishDomainCategory>,
 }
 
 impl HtmlInfo {
@@ -103,6 +105,7 @@ impl HtmlInfo {
             outlinks,
             title,
             icon,
+            category: None,
         })
     }
 }
@@ -114,6 +117,10 @@ impl Into<proto::Page> for HtmlInfo {
             title: self.title.unwrap_or_default(),
             summary: String::from(""),
             icon: self.icon.unwrap_or_default(),
+            category: self
+                .category
+                .unwrap_or(FishDomainCategory::Unknown)
+                .to_string(),
         }
     }
 }
@@ -143,6 +150,8 @@ impl From<url::ParseError> for HtmlError {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     pretty_env_logger::init();
 
+    let fishfish = Arc::new(RwLock::new(FishFish::new()));
+
     let settings = match GoogolConfig::default() {
         Err(e) => {
             error!("{:#?}", e);
@@ -163,6 +172,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     for task_id in 1..=settings.threads {
         let address = gateway_address.clone();
         let stop_words = settings.stop_words.clone();
+        let fishfish = Arc::clone(&fishfish);
 
         join_set.spawn(async move {
             let mut interval = MIN_BACKOFF;
@@ -186,7 +196,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 let response = response.into_inner();
 
                                 match HtmlInfo::new(&response.url, &stop_words).await {
-                                    Ok(html_info) => {
+                                    Ok(mut html_info) => {
                                         debug!("html_info = {:#?}", html_info);
 
                                         let page = Some(html_info.clone().into());
@@ -196,6 +206,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                                         let index = Some(Index { page, words, outlinks });
                                         debug!("index = {:#?}", index);
+
+                                       html_info.category = {
+                                            let mut fishfish = fishfish.write().await;
+                                            if let Some(host) = html_info.url.host() {
+                                                let host = host.to_owned();
+                                                Some(fishfish.domain_category(&host).await)
+                                            } else {
+                                                None
+                                            }
+                                        };
+                                        debugv!(html_info.category);
 
                                         client
                                             .index(Request::new(IndexRequest { index }))

@@ -37,6 +37,7 @@ message Page {
   string title = 2;
   string summary = 3;
   string icon = 4;
+  string category = 5;
 }
 
 message BarrelStatus {

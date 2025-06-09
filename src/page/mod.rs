@@ -9,7 +9,7 @@
 //!     .with_title("Example");
 //! ```
 
-use crate::proto;
+use crate::{fishfish::domain::category::FishDomainCategory, proto};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
@@ -64,6 +64,8 @@ pub struct Page {
     pub icon: Option<String>,
     /// The timestamp when the page was indexed.
     pub timestamp: DateTime<Utc>,
+    /// Fish Domain category
+    pub category: Option<FishDomainCategory>,
 }
 
 impl Page {
@@ -207,6 +209,7 @@ impl Default for Page {
             summary: None,
             icon: None,
             timestamp: Utc::now(),
+            category: None,
         }
     }
 }
@@ -233,6 +236,7 @@ impl From<proto::Page> for Page {
                 _ => Some(value.icon),
             },
             timestamp: Utc::now(),
+            category: FishDomainCategory::from_string(value.category),
         }
     }
 }
@@ -245,6 +249,10 @@ impl Into<proto::Page> for Page {
             title: self.title.unwrap_or_default(),
             summary: self.summary.unwrap_or_default(),
             icon: self.icon.unwrap_or_default(),
+            category: match self.category {
+                Some(fish_category) => fish_category.to_string(),
+                None => "".to_string(),
+            },
         }
     }
 }
@@ -280,6 +288,7 @@ mod tests {
             title: "example".to_string(),
             summary: "summary".to_string(),
             icon: "".to_string(),
+            category: "".to_string(),
         };
 
         let expected_proto_page: proto::Page = page.into();
@@ -298,6 +307,7 @@ mod tests {
             title: "example".to_string(),
             summary: "summary".to_string(),
             icon: "".to_string(),
+            category: "".to_string(),
         };
 
         assert_eq!(Page::from(proto_page), page);

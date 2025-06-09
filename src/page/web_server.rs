@@ -1,4 +1,4 @@
-use crate::proto;
+use crate::{fishfish::domain::category::FishDomainCategory, proto};
 use serde::Serialize;
 
 /// Represents a web page with its URL, title, summary, and icon.
@@ -17,6 +17,7 @@ use serde::Serialize;
 ///     title: "Example".to_string(),
 ///     summary: "An example page".to_string(),
 ///     icon: "icon.png".to_string(),
+///     category: "".to_string(),
 /// };
 ///
 /// // Convert from proto::Page to Page
@@ -35,6 +36,7 @@ use serde::Serialize;
 ///     title: Some("Rust".to_string()),
 ///     summary: Some("The Rust Programming Language".to_string()),
 ///     icon: None,
+///     category: None,
 /// };
 ///
 /// // Convert to proto::Page
@@ -51,6 +53,8 @@ pub struct Page {
     pub summary: Option<String>,
     /// Optional icon URL or identifier.
     pub icon: Option<String>,
+    /// Fish domain category
+    pub category: Option<FishDomainCategory>,
 }
 
 impl From<proto::Page> for Page {
@@ -78,6 +82,7 @@ impl From<proto::Page> for Page {
                 0 => None,
                 _ => Some(value.icon),
             },
+            category: FishDomainCategory::from_string(value.category),
         }
     }
 }
@@ -94,6 +99,10 @@ impl Into<proto::Page> for Page {
             title: self.title.unwrap_or_default(),
             summary: self.summary.unwrap_or_default(),
             icon: self.icon.unwrap_or_default(),
+            category: match self.category {
+                Some(category) => category.to_string(),
+                None => "".to_string(),
+            },
         }
     }
 }
