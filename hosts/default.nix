@@ -13,7 +13,15 @@ let
       extraModules ? [
       ],
       extraSpecialArgs ? {
-        inherit (self.packages."${system}") googol;
+        googol = {
+          inherit (self.packages."${system}")
+            client
+            gateway
+            downloader
+            barrel
+            web-server
+            ;
+        };
       },
     }:
     nixosSystem {

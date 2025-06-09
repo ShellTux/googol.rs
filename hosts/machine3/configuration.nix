@@ -13,17 +13,22 @@
       TERM = "screen-256color";
     };
 
-    systemPackages = [
-      pkgs.bat
-      pkgs.btop
-      pkgs.cowsay
-      pkgs.curl
-      pkgs.htop
-      pkgs.lolcat
-      pkgs.tldr
-      pkgs.tmux
-      pkgs.vim
-    ] ++ [ googol ];
+    systemPackages =
+      [
+        pkgs.bat
+        pkgs.btop
+        pkgs.cowsay
+        pkgs.curl
+        pkgs.htop
+        pkgs.lolcat
+        pkgs.tldr
+        pkgs.tmux
+        pkgs.vim
+      ]
+      ++ [
+        googol.client
+        googol.web-server
+      ];
   };
 
   system.stateVersion = "24.11";
