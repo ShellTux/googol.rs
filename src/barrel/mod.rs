@@ -67,7 +67,7 @@ impl Barrel {
     /// # Arguments
     ///
     /// * `config` - A reference to a `BarrelConfig` containing the configuration parameters,
-    /// including the address and filepath for loading the index store.
+    ///   including the address and filepath for loading the index store.
     ///
     /// # Returns
     ///
@@ -85,12 +85,10 @@ impl Barrel {
     /// let barrel = Barrel::new(&config);
     /// ```
     pub async fn new(config: &BarrelConfig) -> Self {
-        let mut barrel = Barrel::default();
-        barrel.address = Address::new(config.address);
-
-        *barrel.index.lock().await = IndexStore::load(&config.filepath).unwrap();
-
-        barrel
+        Self {
+            address: Address::new(config.address),
+            index: AsyncMutex::new(IndexStore::load(&config.filepath).unwrap()),
+        }
     }
 }
 
@@ -271,7 +269,7 @@ impl BarrelService for Barrel {
 
         let words = index.words;
 
-        let outlinks = index
+        let outlinks: Vec<Url> = index
             .outlinks
             .iter()
             .filter_map(|url| match Url::parse(url) {

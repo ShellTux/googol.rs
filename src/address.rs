@@ -64,6 +64,6 @@ impl Address {
     /// println!("{}", addr); // Outputs: "SocketAddr { ip: V4(192.168.1.1), port: 1234 }"
     /// ```
     pub fn new(address: SocketAddr) -> Self {
-        Self(SocketAddr::from(address))
+        Self(address)
     }
 }

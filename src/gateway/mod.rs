@@ -399,7 +399,6 @@ impl GatewayService for Gateway {
 
                 Box::pin(async move {
                     // Send index request to each barrel.
-                    let response = client.index(request).await;
 
                     //if let Ok(response) = response {
                     //    let response = response.into_inner();
@@ -408,7 +407,7 @@ impl GatewayService for Gateway {
                     //}
 
                     // Additional response handling can be added here.
-                    response
+                    client.index(request).await
                 })
             })
             .await
@@ -553,10 +552,10 @@ mod tests {
     fn test_gateway_default_interactive_off() {
         let gateway = Gateway::default();
 
-        assert_eq!(gateway.interactive, false);
+        assert!(!gateway.interactive);
 
         let gateway = gateway.with_interactive(true);
 
-        assert_eq!(gateway.interactive, true);
+        assert!(gateway.interactive);
     }
 }

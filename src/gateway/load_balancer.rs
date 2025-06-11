@@ -72,7 +72,7 @@ impl<'a> IntoIterator for &'a mut LoadBalancer {
 
 impl LoadBalancer {
     pub fn new(barrels: &HashSet<SocketAddr>) -> Self {
-        assert!(barrels.len() > 0);
+        assert!(!barrels.is_empty());
 
         Self {
             barrels: barrels.iter().map(|addr| Barrel::new(*addr)).collect(),
@@ -120,7 +120,7 @@ impl LoadBalancer {
             }
         }
 
-        if responses.len() > 0 {
+        if !responses.is_empty() {
             LBResult::Ok(responses, offline, avg_response)
         } else {
             let offline = self.barrels.len();

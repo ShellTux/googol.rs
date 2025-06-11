@@ -183,10 +183,10 @@
           };
 
           pre-commit.settings.hooks = {
-            # cargo-check.enable = true;
+            cargo-check.enable = true;
             check-toml.enable = true;
-            # clippy.enable = true;
-            # nixpkgs-fmt.enable = true;
+            clippy.enable = true;
+            nixfmt-rfc-style.enable = true;
             rustfmt.enable = true;
           };
 

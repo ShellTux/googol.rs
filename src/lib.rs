@@ -29,10 +29,10 @@ enum GoogolStatus {
     UnavailableBarrels = 4,
 }
 
-/// The `proto` module contains gRPC message and service definitions generated from protobuf files.
 pub mod proto {
     //! gRPC message and service definitions.
     //!
+    //! The `proto` module contains gRPC message and service definitions generated from protobuf files.
     //! Generated code from protobuf files using `tonic`.
     //!
     //! # Example:

@@ -11,14 +11,11 @@
 //! let mut index_store = IndexStore::default();
 //! // Sample pages and their data
 //! let page1 = Page::create("https://example.com/page1").with_title("Page One");
-//! let words1 = ["rust", "programming", "language"]
-//!     .iter()
-//!     .map(|w| w.to_string())
-//!     .collect();
-//! let outlinks_for_page1 = ["https://link1.com", "https://link2.com"]
-//!     .iter()
-//!     .map(|u| Url::parse(u).unwrap())
-//!     .collect();
+//! let words1 = ["rust", "programming", "language"];
+//! let outlinks_for_page1 = [
+//!     "https://link1.com".parse().unwrap(),
+//!     "https://link2.com".parse().unwrap()
+//! ];
 //! index_store.store(&page1, &words1, &outlinks_for_page1);
 //! ```
 //!
@@ -65,8 +62,8 @@ use url::Url;
 /// let mut store = IndexStore::new("index_data.json");
 /// let page = Page::create("https://example.com")
 ///     .with_title("Example Page");
-/// let words = ["example", "page"].iter().map(|w| w.to_string()).collect();
-/// let outlinks = ["https://linked.com"].iter().map(|u| Url::parse(u).unwrap()).collect();
+/// let words = ["example", "page"];
+/// let outlinks = ["https://linked.com".parse().unwrap()];
 /// store.store(&page, &words, &outlinks);
 /// ```
 ///
@@ -122,11 +119,10 @@ impl IndexStore {
     where
         P: AsRef<Path>,
     {
-        let mut index_store = Self::default();
-
-        index_store.filepath = filepath.as_ref().to_path_buf();
-
-        index_store
+        Self {
+            filepath: filepath.as_ref().to_path_buf(),
+            ..Self::default()
+        }
     }
 
     /// Loads an `IndexStore` from disk at the given path.
@@ -173,12 +169,15 @@ impl IndexStore {
     ///
     /// # Arguments
     ///
-    /// * `words` - A vector of words to search for.
+    /// * `words` - A slice of words to search for.
     ///
     /// # Returns
     ///
     /// A set of `Page` instances matching all words. Empty if no matches or input is empty.
-    pub fn search(&self, words: &Vec<String>) -> HashSet<Page> {
+    pub fn search<S>(&self, words: &[S]) -> HashSet<Page>
+    where
+        S: AsRef<str>,
+    {
         if words.is_empty() {
             return HashSet::new();
         }
@@ -186,7 +185,7 @@ impl IndexStore {
         // Collect URL sets for each word (case-insensitive)
         let sets_of_urls: Vec<&HashSet<Url>> = words
             .iter()
-            .map(|w| w.to_lowercase())
+            .map(|w| w.as_ref().to_lowercase())
             .filter_map(|word| self.index.get(&word))
             .collect();
 
@@ -215,12 +214,15 @@ impl IndexStore {
     ///
     /// # Arguments
     ///
-    /// * `words` - A vector of words to search for.
+    /// * `words` - A slice of words to search for.
     ///
     /// # Returns
     ///
     /// A vector of `Page` sorted by relevance (backlink count).
-    pub fn search_by_relevance(&self, words: &Vec<String>) -> Vec<Page> {
+    pub fn search_by_relevance<S>(&self, words: &[S]) -> Vec<Page>
+    where
+        S: AsRef<str>,
+    {
         let pages = self.search(words);
 
         let mut pages_with_backlinks: Vec<(Page, usize)> = pages
@@ -232,7 +234,7 @@ impl IndexStore {
             .collect();
 
         // Sort descending by backlink count
-        pages_with_backlinks.sort_by(|(_, a_size), (_, b_size)| b_size.cmp(&a_size));
+        pages_with_backlinks.sort_by(|(_, a_size), (_, b_size)| b_size.cmp(a_size));
 
         pages_with_backlinks
             .into_iter()
@@ -249,31 +251,34 @@ impl IndexStore {
     /// * `page` - The `Page` to store.
     /// * `words` - Words associated with the page.
     /// * `outlinks` - Outgoing links from the page.
-    pub fn store(&mut self, page: &Page, words: &Vec<String>, outlinks: &Vec<Url>) {
+    pub fn store<S>(&mut self, page: &Page, words: &[S], outlinks: &[Url])
+    where
+        S: AsRef<str>,
+    {
         self.indexed_pages.insert(page.clone());
         self.url2pages.insert(page.url.clone(), page.clone());
 
-        for word in words.iter().map(|word| word.to_lowercase()) {
+        for word in words.iter().map(|word| word.as_ref().to_lowercase()) {
             self.index
                 .entry(word.clone())
-                .or_insert_with(HashSet::new)
+                .or_default()
                 .insert(page.url.clone());
 
             self.invert_index
                 .entry(page.url.clone())
-                .or_insert_with(HashSet::new)
+                .or_default()
                 .insert(word.clone());
         }
 
         self.outlinks
             .entry(page.url.clone())
-            .or_insert_with(HashSet::new)
+            .or_default()
             .extend(outlinks.iter().cloned());
 
         for outlink in outlinks {
             self.backlinks
                 .entry(outlink.clone())
-                .or_insert_with(HashSet::new)
+                .or_default()
                 .insert(page.url.clone());
         }
     }
@@ -364,34 +369,25 @@ mod tests {
 
         // Sample pages and their data
         let page1 = Page::create("https://example.com/page1").with_title("Page One");
-        let words1 = ["rust", "programming", "language"]
-            .iter()
-            .map(|w| w.to_string())
-            .collect();
-        let outlinks_for_page1 = ["https://link1.com", "https://link2.com"]
-            .iter()
-            .map(|u| Url::parse(u).unwrap())
-            .collect();
+        let words1 = ["rust", "programming", "language"];
+        let outlinks_for_page1 = [
+            "https://link1.com".parse().unwrap(),
+            "https://link2.com".parse().unwrap(),
+        ];
         index_store.store(&page1, &words1, &outlinks_for_page1);
 
         let page2 = Page::create("https://example.com/page2").with_title("Page Two");
-        let words2 = ["rust", "web"].iter().map(|w| w.to_string()).collect();
-        let outlinks_for_page2 = ["https://link3.com"].iter().map(parse_url_panic).collect();
+        let words2 = ["rust", "web"];
+        let outlinks_for_page2 = ["https://link3.com".parse().unwrap()];
         index_store.store(&page2, &words2, &outlinks_for_page2);
 
         let page3 = Page::create("https://example.com/page3").with_title("Page Three");
-        let words3 = ["programming", "tutorial"]
-            .iter()
-            .map(|w| w.to_string())
-            .collect();
+        let words3 = ["programming", "tutorial"];
         let outlinks_for_page3 = [
-            "https://link4.com",
-            "https://link5.com",
-            "https://link6.com",
-        ]
-        .iter()
-        .map(parse_url_panic)
-        .collect();
+            "https://link4.com".parse().unwrap(),
+            "https://link5.com".parse().unwrap(),
+            "https://link6.com".parse().unwrap(),
+        ];
         index_store.store(&page3, &words3, &outlinks_for_page3);
 
         // Add backlinks for testing search_by_relevance
@@ -425,7 +421,7 @@ mod tests {
     fn test_search_single_word() {
         let index_store = create_index_store();
 
-        let results = index_store.search(&vec!["rust".to_string()]);
+        let results = index_store.search(&["rust"]);
         let urls: HashSet<Url> = results.iter().map(|p| p.url.clone()).collect();
 
         assert_eq!(urls.len(), 2);
@@ -438,12 +434,7 @@ mod tests {
         let index_store = create_index_store();
 
         // Search for pages containing both "rust" and "programming"
-        let results = index_store.search(
-            &["rust", "programming"]
-                .iter()
-                .map(|w| w.to_string())
-                .collect(),
-        );
+        let results = index_store.search(&["rust", "programming"]);
         let urls: HashSet<_> = results.iter().map(|p| p.url.clone()).collect();
 
         assert_eq!(urls.len(), 1);
@@ -454,10 +445,10 @@ mod tests {
     fn test_search_no_match() {
         let index_store = create_index_store();
 
-        let results = index_store.search(&vec!["nonexistent".to_string()]);
+        let results = index_store.search(&["nonexistent"]);
         assert!(results.is_empty());
 
-        let results2 = index_store.search(&vec!["rust".to_string(), "nonexistent".to_string()]);
+        let results2 = index_store.search(&["rust", "nonexistent"]);
         assert!(results2.is_empty());
     }
 
@@ -465,7 +456,7 @@ mod tests {
     fn test_search_empty_input() {
         let index_store = create_index_store();
 
-        let results = index_store.search(&vec![]);
+        let results = index_store.search::<&str>(&[]);
         assert!(results.is_empty());
     }
 
@@ -473,8 +464,8 @@ mod tests {
     fn test_search_case_insensitivity() {
         let index_store = create_index_store();
 
-        let results_lower = index_store.search(&vec!["rust".to_string()]);
-        let results_upper = index_store.search(&vec!["RUST".to_string()]);
+        let results_lower = index_store.search(&["rust"]);
+        let results_upper = index_store.search(&["RUST"]);
 
         let urls_lower: HashSet<_> = results_lower.iter().map(|p| p.url.clone()).collect();
         let urls_upper: HashSet<_> = results_upper.iter().map(|p| p.url.clone()).collect();
@@ -487,7 +478,7 @@ mod tests {
         let index_store = create_index_store();
 
         // Search for pages containing "rust"
-        let sorted_pages = index_store.search_by_relevance(&vec!["rust".to_string()]);
+        let sorted_pages = index_store.search_by_relevance(&["rust"]);
 
         // Expect pages sorted by backlinks: page3 (3), page1 (2), page2 (1)
         assert_eq!(sorted_pages.len(), 2);
@@ -510,7 +501,7 @@ mod tests {
         let index_store = create_index_store();
 
         // Search for non-existent words
-        let results = index_store.search_by_relevance(&vec!["nonexistent".to_string()]);
+        let results = index_store.search_by_relevance(&["nonexistent"]);
         assert!(results.is_empty());
     }
 
@@ -520,11 +511,11 @@ mod tests {
 
         // Create a page with no backlinks
         let page_no_backlinks = create_page("https://example.com/page4", Some("Page Four"));
-        let words = vec!["tutorial"].iter().map(|w| w.to_string()).collect();
-        index_store.store(&page_no_backlinks, &words, &vec![]);
+        let words = ["tutorial"];
+        index_store.store(&page_no_backlinks, &words, &[]);
 
         // Now search for "tutorial", which matches page3 and page4
-        let results = index_store.search_by_relevance(&vec!["tutorial".to_string()]);
+        let results = index_store.search_by_relevance(&["tutorial"]);
         // Page3 has backlinks, page4 has none
         assert_eq!(results.len(), 2);
         assert_eq!(

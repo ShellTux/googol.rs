@@ -87,19 +87,19 @@ impl From<proto::Page> for Page {
     }
 }
 
-impl Into<proto::Page> for Page {
+impl From<Page> for proto::Page {
     /// Converts a `Page` into its protocol buffer (`proto::Page`) representation.
     ///
     /// # Returns
     ///
     /// A `proto::Page` with fields populated from the `Page`.
-    fn into(self) -> proto::Page {
+    fn from(val: Page) -> Self {
         proto::Page {
-            url: self.href,
-            title: self.title.unwrap_or_default(),
-            summary: self.summary.unwrap_or_default(),
-            icon: self.icon.unwrap_or_default(),
-            category: match self.category {
+            url: val.href,
+            title: val.title.unwrap_or_default(),
+            summary: val.summary.unwrap_or_default(),
+            icon: val.icon.unwrap_or_default(),
+            category: match val.category {
                 Some(category) => category.to_string(),
                 None => "".to_string(),
             },

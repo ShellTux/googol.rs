@@ -115,7 +115,7 @@ where
 
         sleep(delay).await;
 
-        delay = delay * 2;
+        delay *= 2;
     }
 }
 

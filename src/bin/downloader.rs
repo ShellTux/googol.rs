@@ -110,14 +110,14 @@ impl HtmlInfo {
     }
 }
 
-impl Into<proto::Page> for HtmlInfo {
-    fn into(self) -> proto::Page {
+impl From<HtmlInfo> for proto::Page {
+    fn from(val: HtmlInfo) -> Self {
         proto::Page {
-            url: self.url.to_string(),
-            title: self.title.unwrap_or_default(),
+            url: val.url.to_string(),
+            title: val.title.unwrap_or_default(),
             summary: String::from(""),
-            icon: self.icon.unwrap_or_default(),
-            category: self
+            icon: val.icon.unwrap_or_default(),
+            category: val
                 .category
                 .unwrap_or(FishDomainCategory::Unknown)
                 .to_string(),

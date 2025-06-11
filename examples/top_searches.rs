@@ -6,6 +6,12 @@ pub struct KeywordCounter {
     counts: HashMap<String, usize>,
 }
 
+impl Default for KeywordCounter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl KeywordCounter {
     /// Create a new empty KeywordCounter
     pub fn new() -> Self {

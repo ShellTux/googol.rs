@@ -102,7 +102,7 @@ async fn search_handler(
             .into_inner()
             .words
             .split(',')
-            .filter(|word| word.len() > 0)
+            .filter(|word| !word.is_empty())
             .map(|word| word.to_string())
             .collect(),
     };
@@ -124,7 +124,7 @@ async fn search_handler(
                                 .pages
                                 .iter()
                                 .cloned()
-                                .map(|page| page::web_server::Page::from(page))
+                                .map(page::web_server::Page::from)
                                 .collect();
 
                             debug!("{:#?}", results);
@@ -260,7 +260,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Starting web-server at {}...", settings.address);
 
     HttpServer::new(move || {
-        let gateway_address = settings.gateway_address.clone();
+        let gateway_address = settings.gateway_address;
 
         App::new()
             .app_data(web::Data::new(gateway_address))

@@ -41,27 +41,27 @@ fn main() {
     index
         .outlinks
         .entry(url.clone())
-        .or_insert(HashSet::new())
+        .or_default()
         .insert(url.clone());
 
     index
         .backlinks
         .entry(url.clone())
-        .or_insert(HashSet::new())
+        .or_default()
         .insert(url.clone());
 
     index
         .indexed_pages
         .0
         .entry(word.clone())
-        .or_insert_with(HashSet::new)
+        .or_default()
         .insert(page.clone());
 
     index
         .inverted_indexed_pages
         .0
         .entry(url.clone())
-        .or_insert_with(HashSet::new)
+        .or_default()
         .insert(word.clone());
 
     dbg!(&index);

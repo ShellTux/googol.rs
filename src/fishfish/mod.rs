@@ -16,6 +16,12 @@ pub struct FishFish {
     host2domain: HashMap<Host, Option<FishDomain>>,
 }
 
+impl Default for FishFish {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FishFish {
     /// Creates a new instance of `FishFish`.
     pub fn new() -> Self {

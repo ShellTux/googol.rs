@@ -53,6 +53,7 @@ pub mod web_server;
 /// assert_eq!(page, deserialized);
 /// ```
 #[derive(Debug, Clone, Eq, Hash, Serialize, Deserialize)]
+#[allow(clippy::derived_hash_with_manual_eq)]
 pub struct Page {
     /// The URL of the page.
     pub url: Url,
@@ -88,9 +89,10 @@ impl Page {
     /// assert_eq!(page.url.as_str(), "https://rust-lang.org/");
     /// ```
     pub fn create(url: &str) -> Self {
-        let mut page = Self::default();
-        page.url = Url::parse(url).unwrap();
-        page
+        Self {
+            url: url.parse().unwrap(),
+            ..Self::default()
+        }
     }
 
     /// Sets the title of the page.
@@ -241,15 +243,15 @@ impl From<proto::Page> for Page {
     }
 }
 
-impl Into<proto::Page> for Page {
+impl From<Page> for proto::Page {
     /// Converts a `Page` into its protocol buffer representation.
-    fn into(self) -> proto::Page {
+    fn from(val: Page) -> Self {
         proto::Page {
-            url: self.url.to_string(),
-            title: self.title.unwrap_or_default(),
-            summary: self.summary.unwrap_or_default(),
-            icon: self.icon.unwrap_or_default(),
-            category: match self.category {
+            url: val.url.to_string(),
+            title: val.title.unwrap_or_default(),
+            summary: val.summary.unwrap_or_default(),
+            icon: val.icon.unwrap_or_default(),
+            category: match val.category {
                 Some(fish_category) => fish_category.to_string(),
                 None => "".to_string(),
             },
