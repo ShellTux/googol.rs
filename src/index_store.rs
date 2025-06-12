@@ -5,12 +5,16 @@
 //! # Example:
 //!
 //! ```rust
-//! use googol::{index_store::IndexStore, page::Page};
+//! use googol::{index_store::IndexStore, page::{Page, PageBuilder}};
 //! use url::Url;
 //!
 //! let mut index_store = IndexStore::default();
 //! // Sample pages and their data
-//! let page1 = Page::create("https://example.com/page1").with_title("Page One");
+//! let page1 = PageBuilder::default()
+//!     .url("https://example.com/page1".parse().unwrap())
+//!     .title("Page One")
+//!     .build()
+//!     .unwrap();
 //! let words1 = ["rust", "programming", "language"];
 //! let outlinks_for_page1 = [
 //!     "https://link1.com".parse().unwrap(),
@@ -57,11 +61,13 @@ use url::Url;
 ///
 /// ```rust
 /// use url::Url;
-/// use googol::{index_store::IndexStore, page::Page};
+/// use googol::{index_store::IndexStore, page::{Page, PageBuilder}};
 ///
 /// let mut store = IndexStore::new("index_data.json");
-/// let page = Page::create("https://example.com")
-///     .with_title("Example Page");
+/// let page = PageBuilder::default()
+///     .url("https://example.com".parse().unwrap())
+///     .build()
+///     .unwrap();
 /// let words = ["example", "page"];
 /// let outlinks = ["https://linked.com".parse().unwrap()];
 /// store.store(&page, &words, &outlinks);
@@ -346,29 +352,22 @@ impl IndexStore {
 /// Tests for `IndexStore` functionalities.
 #[cfg(test)]
 mod tests {
-    use crate::url::parse_url_panic;
+    use crate::{page::PageBuilder, url::parse_url_panic};
 
     use super::*;
     use std::{collections::HashSet, fs, path};
     use url::Url;
-
-    /// Helper to create a Page with optional title.
-    fn create_page(url: &str, title: Option<&str>) -> Page {
-        let mut page = Page::create(url);
-
-        if let Some(t) = title {
-            page = page.with_title(t);
-        }
-
-        page
-    }
 
     /// Helper to initialize an index with sample data.
     fn create_index_store() -> IndexStore {
         let mut index_store = IndexStore::default();
 
         // Sample pages and their data
-        let page1 = Page::create("https://example.com/page1").with_title("Page One");
+        let page1 = PageBuilder::default()
+            .url("https://example.com/page1".parse().unwrap())
+            .title("Page One")
+            .build()
+            .unwrap();
         let words1 = ["rust", "programming", "language"];
         let outlinks_for_page1 = [
             "https://link1.com".parse().unwrap(),
@@ -376,12 +375,20 @@ mod tests {
         ];
         index_store.store(&page1, &words1, &outlinks_for_page1);
 
-        let page2 = Page::create("https://example.com/page2").with_title("Page Two");
+        let page2 = PageBuilder::default()
+            .url("https://example.com/page2".parse().unwrap())
+            .title("Page Two")
+            .build()
+            .unwrap();
         let words2 = ["rust", "web"];
         let outlinks_for_page2 = ["https://link3.com".parse().unwrap()];
         index_store.store(&page2, &words2, &outlinks_for_page2);
 
-        let page3 = Page::create("https://example.com/page3").with_title("Page Three");
+        let page3 = PageBuilder::default()
+            .url("https://example.com/page3".parse().unwrap())
+            .title("Page Three")
+            .build()
+            .unwrap();
         let words3 = ["programming", "tutorial"];
         let outlinks_for_page3 = [
             "https://link4.com".parse().unwrap(),
@@ -510,7 +517,11 @@ mod tests {
         let mut index_store = create_index_store();
 
         // Create a page with no backlinks
-        let page_no_backlinks = create_page("https://example.com/page4", Some("Page Four"));
+        let page_no_backlinks = PageBuilder::default()
+            .url("https://example.com/page4".parse().unwrap())
+            .title("Page Four")
+            .build()
+            .unwrap();
         let words = ["tutorial"];
         index_store.store(&page_no_backlinks, &words, &[]);
 

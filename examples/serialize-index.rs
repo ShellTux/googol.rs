@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use googol::page::Page;
+use googol::page::{Page, PageBuilder};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
@@ -36,7 +36,11 @@ fn main() {
     let url = Url::parse("https://google.com").unwrap();
     let word = "foo".to_string();
 
-    let page = Page::create(url.as_str()).with_title("Google");
+    let page = PageBuilder::default()
+        .url(url.clone())
+        .title("Google")
+        .build()
+        .unwrap();
 
     index
         .outlinks

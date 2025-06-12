@@ -3,14 +3,20 @@
 //! Example:
 //!
 //! ```rust
-//! use googol::page::Page;
+//! use chrono::Utc;
+//! use googol::page::{Page, PageBuilder};
 //!
-//! let page = Page::create("https://example.com")
-//!     .with_title("Example");
+//! let page = PageBuilder::default()
+//!     .url("https://example.com".parse().unwrap())
+//!     .title("Title")
+//!     .timestamp(Utc::now())
+//!     .build()
+//!     .unwrap();
 //! ```
 
 use crate::{fishfish::domain::category::FishDomainCategory, proto};
 use chrono::{DateTime, Utc};
+use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use url::Url;
@@ -26,12 +32,15 @@ pub mod web_server;
 /// ```rust
 /// use url::Url;
 /// use chrono::Utc;
-/// use googol::page::Page;
+/// use googol::page::{Page, PageBuilder};
 ///
 /// // Create a new page with a URL
-/// let page = Page::create("https://example.com")
-///     .with_title("Example")
-///     .with_summary("An example page");
+/// let page = PageBuilder::default()
+///     .url("https://example.com".parse().unwrap())
+///     .title("Example")
+///     .summary("An example page")
+///     .build()
+///     .unwrap();
 ///
 /// // Access fields
 /// assert_eq!(page.url.as_str(), "https://example.com/");
@@ -42,178 +51,39 @@ pub mod web_server;
 /// You can serialize and deserialize `Page` instances using Serde:
 ///
 /// ```rust
-/// use googol::page::Page;
+/// use googol::page::{Page, PageBuilder};
 ///
-/// let page = Page::create("https://example.com")
-///     .with_title("Example")
-///     .with_summary("An example page");
+/// let page = PageBuilder::default()
+///     .url("https://example.com".parse().unwrap())
+///     .title("Example")
+///     .summary("An example page")
+///     .build()
+///     .unwrap();
 ///
 /// let json = serde_json::to_string(&page).unwrap();
 /// let deserialized: Page = serde_json::from_str(&json).unwrap();
 /// assert_eq!(page, deserialized);
 /// ```
-#[derive(Debug, Clone, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, Hash, Builder, Serialize, Deserialize)]
 #[allow(clippy::derived_hash_with_manual_eq)]
 pub struct Page {
     /// The URL of the page.
     pub url: Url,
     /// Optional title of the page.
+    #[builder(setter(into, strip_option), default)]
     pub title: Option<String>,
     /// Optional summary or description of the page.
+    #[builder(setter(into, strip_option), default)]
     pub summary: Option<String>,
     /// Optional icon URL or identifier.
+    #[builder(setter(into, strip_option), default)]
     pub icon: Option<String>,
     /// The timestamp when the page was indexed.
+    #[builder(setter(into, strip_option), default)]
     pub timestamp: DateTime<Utc>,
     /// Fish Domain category
+    #[builder(setter(into, strip_option), default)]
     pub category: Option<FishDomainCategory>,
-}
-
-impl Page {
-    /// Creates a new `Page` instance with the specified URL.
-    ///
-    /// # Arguments
-    ///
-    /// * `url` - A string slice representing the page URL.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the URL cannot be parsed.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use googol::page::Page;
-    ///
-    /// let page = Page::create("https://rust-lang.org");
-    /// assert_eq!(page.url.as_str(), "https://rust-lang.org/");
-    /// ```
-    pub fn create(url: &str) -> Self {
-        Self {
-            url: url.parse().unwrap(),
-            ..Self::default()
-        }
-    }
-
-    /// Sets the title of the page.
-    ///
-    /// # Arguments
-    ///
-    /// * `title` - A string slice representing the page title.
-    ///
-    /// # Returns
-    ///
-    /// Self, allowing method chaining.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use googol::page::Page;
-    ///
-    /// let page = Page::create("https://example.com").with_title("Example");
-    /// assert_eq!(page.title.as_deref(), Some("Example"));
-    /// ```
-    #[allow(dead_code)]
-    pub fn with_title(mut self, title: &str) -> Self {
-        self.title = Some(title.to_string());
-        self
-    }
-
-    /// Sets the summary of the page.
-    ///
-    /// # Arguments
-    ///
-    /// * `summary` - A string slice representing the page summary.
-    ///
-    /// # Returns
-    ///
-    /// Self, allowing method chaining.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use googol::page::Page;
-    ///
-    /// let page = Page::create("https://example.com").with_summary("An example page");
-    /// assert_eq!(page.summary.as_deref(), Some("An example page"));
-    /// ```
-    #[allow(dead_code)]
-    pub fn with_summary(mut self, summary: &str) -> Self {
-        self.summary = Some(summary.to_string());
-        self
-    }
-
-    /// Sets the icon for the page.
-    ///
-    /// # Arguments
-    ///
-    /// * `icon` - A string slice representing the icon URL or identifier.
-    ///
-    /// # Returns
-    ///
-    /// Self, allowing method chaining.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use googol::page::Page;
-    ///
-    /// let page = Page::create("https://example.com").with_icon("icon.png");
-    /// assert_eq!(page.icon.as_deref(), Some("icon.png"));
-    /// ```
-    #[allow(dead_code)]
-    pub fn with_icon(mut self, icon: &str) -> Self {
-        self.icon = Some(icon.to_string());
-        self
-    }
-
-    /// Sets the timestamp of the page.
-    ///
-    /// # Arguments
-    ///
-    /// * `timestamp` - A `DateTime<Utc>` representing the timestamp.
-    ///
-    /// # Returns
-    ///
-    /// Self, allowing method chaining.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use chrono::{Utc, TimeZone};
-    /// use url::Url;
-    /// use googol::page::Page;
-    ///
-    /// // Create a specific DateTime for June 1, 2025, at midnight UTC
-    /// let custom_time = Utc.ymd(2025, 6, 1).and_hms(0, 0, 0);
-    ///
-    /// // Create a new page and set the timestamp
-    /// let page = Page::create("https://example.com")
-    ///     .with_title("Example")
-    ///     .with_timestamp(custom_time);
-    ///
-    /// assert_eq!(page.timestamp, custom_time);
-    /// ```
-    #[allow(dead_code)]
-    pub fn with_timestamp(mut self, timestamp: DateTime<Utc>) -> Self {
-        self.timestamp = timestamp;
-        self
-    }
-}
-
-impl Default for Page {
-    /// Creates a default `Page` with a fixed URL, no title, summary, or icon,
-    /// and the current UTC time as the timestamp.
-    fn default() -> Self {
-        Self {
-            url: Url::parse("https://example.com").unwrap(),
-            title: None,
-            summary: None,
-            icon: None,
-            timestamp: Utc::now(),
-            category: None,
-        }
-    }
 }
 
 impl From<proto::Page> for Page {
@@ -224,7 +94,7 @@ impl From<proto::Page> for Page {
     /// Panics if the URL in `proto::Page` is invalid.
     fn from(value: proto::Page) -> Self {
         Self {
-            url: Url::parse(&value.url).expect("Expecting valid url"),
+            url: value.url.parse().expect("Expecting valid url"),
             title: match value.title.len() {
                 0 => None,
                 _ => Some(value.title),
@@ -281,9 +151,12 @@ mod tests {
 
     #[test]
     fn test_into_proto() {
-        let page = Page::create("https://google.com")
-            .with_title("example")
-            .with_summary("summary");
+        let page = PageBuilder::default()
+            .url("https://google.com".parse().unwrap())
+            .title("example")
+            .summary("summary")
+            .build()
+            .unwrap();
 
         let proto_page = proto::Page {
             url: "https://google.com/".to_string(),
@@ -300,9 +173,13 @@ mod tests {
 
     #[test]
     fn test_from_proto() {
-        let page = Page::create("https://google.com")
-            .with_title("example")
-            .with_summary("summary");
+        let page = PageBuilder::default()
+            .url("https://google.com".parse().unwrap())
+            .title("example")
+            .summary("summary")
+            .timestamp(Utc::now())
+            .build()
+            .unwrap();
 
         let proto_page = proto::Page {
             url: "https://google.com".to_string(),
@@ -317,7 +194,11 @@ mod tests {
 
     #[test]
     fn test_serialization() {
-        let page = Page::create("https://google.com").with_title("Google");
+        let page = PageBuilder::default()
+            .url("https://google.com".parse().unwrap())
+            .title("Google")
+            .build()
+            .unwrap();
 
         let page_json = serde_json::to_string(&page).expect("Serialization failed");
 
@@ -329,24 +210,42 @@ mod tests {
 
     #[test]
     fn test_equality() {
-        let page1 = Page::create("https://example.com")
-            .with_title("Title")
-            .with_timestamp(Utc::now());
-        let page2 = Page::create("https://example.com")
-            .with_title("Another Title")
-            .with_timestamp(Utc::now());
+        let page1 = PageBuilder::default()
+            .url("https://example.com".parse().unwrap())
+            .title("Title")
+            .timestamp(Utc::now())
+            .build()
+            .unwrap();
+        let page2 = PageBuilder::default()
+            .url("https://example.com".parse().unwrap())
+            .title("Another Title")
+            .timestamp(Utc::now())
+            .build()
+            .unwrap();
 
         assert_eq!(page1, page2); // equality based on URL and date
 
         let date = Utc.with_ymd_and_hms(2025, 6, 1, 0, 0, 0).unwrap();
 
-        let page1 = Page::create("https://example.com").with_timestamp(date);
-        let page2 = Page::create("https://example.com").with_timestamp(date);
+        let page1 = PageBuilder::default()
+            .url("https://example.com".parse().unwrap())
+            .timestamp(date)
+            .build()
+            .unwrap();
+        let page2 = PageBuilder::default()
+            .url("https://example.com".parse().unwrap())
+            .timestamp(date)
+            .build()
+            .unwrap();
 
         assert_eq!(page1, page2); // same date
 
         let later_date = Utc.with_ymd_and_hms(2025, 6, 2, 0, 0, 0).unwrap();
-        let page3 = Page::create("https://example.com").with_timestamp(later_date);
+        let page3 = PageBuilder::default()
+            .url("https://example.com".parse().unwrap())
+            .timestamp(later_date)
+            .build()
+            .unwrap();
 
         assert_ne!(page1, page3);
     }
@@ -356,8 +255,16 @@ mod tests {
         let ts1 = Utc::now() - chrono::Duration::seconds(10);
         let ts2 = Utc::now();
 
-        let page_old = Page::create("https://example.com/1").with_timestamp(ts1);
-        let page_new = Page::create("https://example.com/2").with_timestamp(ts2);
+        let page_old = PageBuilder::default()
+            .url("https://example.com/1".parse().unwrap())
+            .timestamp(ts1)
+            .build()
+            .unwrap();
+        let page_new = PageBuilder::default()
+            .url("https://example.com/2".parse().unwrap())
+            .timestamp(ts2)
+            .build()
+            .unwrap();
 
         assert!(page_old < page_new);
         assert!(page_new > page_old);
@@ -366,9 +273,12 @@ mod tests {
     #[test]
     fn test_new_with_current_time() {
         let url = Url::parse("https://example.com").unwrap();
-        let page = Page::create("https://example.com")
-            .with_title("Title")
-            .with_timestamp(Utc::now());
+        let page = PageBuilder::default()
+            .url("https://example.com".parse().unwrap())
+            .title("Title")
+            .timestamp(Utc::now())
+            .build()
+            .unwrap();
 
         assert_eq!(page.url, url);
         assert!(page.timestamp <= Utc::now());
@@ -376,13 +286,18 @@ mod tests {
 
     #[test]
     fn test_ordering_with_different_timestamps() {
-        let page1 = Page::create("https://example.com")
-            .with_title("Title")
-            .with_timestamp(DateTime::from_timestamp(0, 0).unwrap());
-
-        let page2 = Page::create("https://example.com")
-            .with_title("Title")
-            .with_timestamp(DateTime::from_timestamp(1, 0).unwrap());
+        let page1 = PageBuilder::default()
+            .url("https://example.com".parse().unwrap())
+            .title("Title")
+            .timestamp(DateTime::from_timestamp(0, 0).unwrap())
+            .build()
+            .unwrap();
+        let page2 = PageBuilder::default()
+            .url("https://example.com".parse().unwrap())
+            .title("Title")
+            .timestamp(DateTime::from_timestamp(1, 0).unwrap())
+            .build()
+            .unwrap();
 
         assert!(page1 < page2);
     }
