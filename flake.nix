@@ -168,11 +168,19 @@
           onefetch = getExe pkgs.onefetch;
         in
         {
-          _module.args.pkgs = import nixpkgs {
-            inherit system;
+          _module.args = {
+            inherit craneLib;
 
-            overlays = [ rust-overlay.overlays.default ];
+            pkgs = import nixpkgs {
+              inherit system;
+
+              overlays = [ rust-overlay.overlays.default ];
+            };
           };
+
+          imports = [
+            ./devShells
+          ];
 
           treefmt = {
             programs = {
