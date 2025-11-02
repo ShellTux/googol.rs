@@ -38,7 +38,7 @@ let
           pkgs.entr
           pkgs.gnuplot
           pkgs.jq
-          pkgs.net-tools
+          pkgs.unixtools.net-tools
           pkgs.python3
           pkgs.tokei
           pkgs.websocat
