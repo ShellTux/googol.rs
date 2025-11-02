@@ -193,7 +193,18 @@ Endpoints:
 | Pesquisar páginas que contenham um conjunto de palavras              | 10        | \textcolor{green}{Pass} |                   |
 | Páginas ordenadas por número de ligações recebidas de outras páginas | 10        | \textcolor{green}{Pass} |                   |
 | Consultar lista de páginas com ligações para uma página específica   | 10        | \textcolor{green}{Pass} |                   |
+| Página de estatísticas atualizada em tempo real                      | 10        | \textcolor{green}{Pass} |                   |
 | Resultados de pesquisa paginados de 10 em 10                         | 10        | \textcolor{red}{Fail}   |                   |
+
+| Tolerância a Falhas e Processamento Paralelo                                   | Pontuação | 35                             | Testes adicionais |
+| --------------------------                                                     | :-:       | :--:                           | :--:              |
+| A informação é idêntica em todos os storage barrels (reliable multicast)       | 5         | \textcolor{yellow}{Incomplete} |                   |
+| Serviço correto se funcionar pelo menos um storage barrel e a gateway          | 5         | \textcolor{green}{Pass}        |                   |
+| Os storage barrels recuperam o seu estado se avariarem (crash)                 | 5         | \textcolor{green}{Pass}        |                   |
+| Balanceamento da carga nas pesquisas sobre os storage barrels                  | 5         | \textcolor{green}{Pass}        |                   |
+| Os downloaders executam em paralelo                                            | 5         | \textcolor{green}{Pass}        |                   |
+| A gateway recupera de quaisquer avarias internas (não têm efeito nos clientes) | 5         | \textcolor{green}{Pass}        |                   |
+| Pedidos de indexação são respondidos apenas por um downloader                  | 5         | \textcolor{green}{Pass}        |                   |
 
 | WebSockets                                                                       | Pontuação | 14                                      | Testes adicionais |
 | -------------------------                                                        | :-:       | :--:                                    | :--:              |
