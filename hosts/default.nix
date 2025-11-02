@@ -41,9 +41,9 @@ let
               pkgs.curl
               pkgs.htop
               pkgs.lolcat
-              pkgs.net-tools
               pkgs.tldr
               pkgs.tmux
+              pkgs.unixtools.net-tools
               pkgs.vim
             ];
             etc = {
