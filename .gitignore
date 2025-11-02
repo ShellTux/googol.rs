@@ -137,6 +137,7 @@ $RECYCLE.BIN/
 *.pdf
 *.err
 *.qcow2
+*.zip
 /.pre-commit-config.yaml
 /result
 
