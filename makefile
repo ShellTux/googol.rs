@@ -13,5 +13,5 @@ all: docs/relatorio.pdf archive
 .PHONY: archive
 archive: googol-LuísGóis.zip
 
-googol-LuísGóis.zip: docs/relatorio.pdf $(GIT_FILES)
-	git archive --verbose --add-file=$< --output=$@ main
+googol-LuísGóis.zip: docs/relatorio.pdf README.pdf $(GIT_FILES)
+	git archive --verbose --add-file=docs/relatorio.pdf --add-file=README.pdf --output=$@ main
