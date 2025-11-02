@@ -38,7 +38,7 @@ let
           pkgs.entr
           pkgs.gnuplot
           pkgs.jq
-          pkgs.unixtools.net-tools
+          pkgs.nettools
           pkgs.python3
           pkgs.tokei
           pkgs.websocat
@@ -50,7 +50,7 @@ let
           pkgs.curl
           pkgs.htop
           pkgs.lolcat
-          pkgs.unixtools.net-tools
+          pkgs.nettools
           pkgs.tldr
           pkgs.tmux
           pkgs.vim

@@ -43,7 +43,7 @@ let
               pkgs.lolcat
               pkgs.tldr
               pkgs.tmux
-              pkgs.unixtools.net-tools
+              pkgs.nettools
               pkgs.vim
             ];
             etc = {
