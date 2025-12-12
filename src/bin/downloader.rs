@@ -196,6 +196,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 let response = response.into_inner();
 
                                 match HtmlInfo::new(&response.url, &stop_words).await {
+                                    Err(e) => {
+                                        error!("e = {:#?}", e);
+                                        false
+                                    },
                                     Ok(mut html_info) => {
                                         debug!("html_info = {:#?}", html_info);
 
@@ -225,7 +229,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                                         true
                                     },
-                                    Err(_) => todo!(),
                                 }
                             }
                         }
