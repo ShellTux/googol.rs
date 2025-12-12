@@ -9,14 +9,31 @@ use googol::{
     },
     settings::{GoogolConfig, Load, web_server::WebServerConfig},
 };
+use lazy_static::lazy_static;
 use log::{debug, error, info};
 use serde::Deserialize;
 use serde_json::json;
 use std::net::SocketAddr;
+use tera::Tera;
 use tonic::{
     Request,
     transport::{Channel, Error},
 };
+
+lazy_static! {
+    pub static ref TEMPLATES: Tera = {
+        let mut tera = match Tera::new("templates/**/*") {
+            Ok(t) => t,
+            Err(e) => {
+                println!("Parsing error(s): {}", e);
+                ::std::process::exit(1);
+            }
+        };
+        tera.autoescape_on(vec![".html", ".sql"]);
+        //tera.register_filter("do_nothing", do_nothing_filter);
+        tera
+    };
+}
 
 async fn get_grpc_client(
     gateway_address: SocketAddr,
