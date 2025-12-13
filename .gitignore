@@ -140,5 +140,6 @@ $RECYCLE.BIN/
 *.zip
 /.pre-commit-config.yaml
 /result
+log/
 
 !/Cargo.lock
