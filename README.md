@@ -175,10 +175,12 @@ Endpoints:
 - /health
   - GET
 - /enqueue
+  - GET
   - POST
   - json { url: String }
 - /search
   - GET
+  - POST
   - Query Params Url encoded. example: `curl address/search?words=vitae`
 - /ws
   - GET
