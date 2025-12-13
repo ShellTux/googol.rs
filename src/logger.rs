@@ -32,6 +32,8 @@
 //! # Note
 //! These macros use `stringify!` to print the variable's name, followed by its value.
 
+use std::env;
+
 /// Logs a variable at the debug level with optional styling.
 ///
 /// # Arguments
@@ -129,4 +131,21 @@ macro_rules! infov {
     ($var:expr) => {
         info!("{} = {:?}", stringify!($var), $var);
     };
+}
+
+pub fn init() {
+    let config = serde_yml::from_str(
+        match env::var("GOOGOL")
+            .unwrap_or_else(|_| "development".to_string())
+            .to_lowercase()
+            .as_str()
+        {
+            "production" | "prod" => include_str!("../config/log4rs/prod.yaml"),
+            "development" | "dev" => include_str!("../config/log4rs/dev.yaml"),
+            _ => panic!("Unknown "),
+        },
+    )
+    .unwrap();
+
+    log4rs::init_raw_config(config).unwrap();
 }

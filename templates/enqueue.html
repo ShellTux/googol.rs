@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block title %}Enqueue{% endblock %}
+
+{% block content %}
+<h1>Enqueue Url</h1>
+<form method="post" action="/enqueue">
+    <div>
+        <label for="url">Url:</label>
+        <input type="text" id="url" name="url" required>
+    </div>
+    <button type="submit">Enqueue</button>
+</form>
+{% endblock %}

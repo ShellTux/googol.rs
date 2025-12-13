@@ -7,7 +7,7 @@ use googol::{
     },
     settings::{GoogolConfig, Load, client::ClientConfig},
 };
-use log::{debug, error};
+use log::{debug, warn};
 use std::{net::SocketAddr, time::Duration};
 use tokio::time::sleep;
 use tonic::{Request, Status, transport::Channel};
@@ -128,7 +128,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let settings = match GoogolConfig::default() {
         Err(e) => {
-            error!("{:#?}", e);
+            warn!("{:#?}", e);
 
             ClientConfig::default()?
         }

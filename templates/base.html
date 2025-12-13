@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %} Googol {% endblock %}</title>
+    <link rel="stylesheet" href="static/style.css">
+    <script>
+        function splitInput(inputField) {
+            const itemsArray = inputField.value.trim().split(/\s+/); // Split by whitespace
+            inputField.value = itemsArray.join(','); // Join with a comma for submission
+        }
+    </script>
+</head>
+<body>
+    <header>
+        <h1>Googol</h1>
+        <nav>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/enqueue">Enqueue</a></li>
+                <li><a href="/search">Search</a></li>
+                <!-- <li><a href="/about">About</a></li> -->
+                <!-- <li><a href="/contact">Contact</a></li> -->
+            </ul>
+        </nav>
+    </header>
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+    <footer>
+        <p>&copy; 2025 Luís Góis SD Googol</p>
+    </footer>
+</body>
+</html>

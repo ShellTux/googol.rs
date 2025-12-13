@@ -11,9 +11,12 @@ pub mod gateway;
 pub mod index_store;
 pub mod interactive;
 pub mod logger;
+pub mod models;
 pub mod page;
+pub mod routes;
 pub mod serde;
 pub mod settings;
+pub mod tera;
 pub mod top_searches;
 pub mod url;
 
