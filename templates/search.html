@@ -18,7 +18,7 @@
         <li>
             <a href="{{ result.href }}" target="_blank">
                 {% if result.icon %}
-                <img src="{{ result.icon }}" alt="{% if result.title is not none %}{{ result.title }}{% else %}Icon{% endif %} icon" />
+                <img src="{{ result.icon }}" alt="{{ result.title | default(value='Icon') }} icon" />
                 {% endif %}
 
                 {% if result.title %}
