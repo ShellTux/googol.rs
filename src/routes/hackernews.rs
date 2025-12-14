@@ -26,10 +26,11 @@ async fn hackernews_post(
 
     let mut context = Context::new();
 
-    let hn_db = &mut hn_db.lock().await;
-    debugv!(&hn_db);
+    {
+        hn_db.write().await.fetch_top_stories_if_expired().await?;
+    }
 
-    hn_db.fetch_top_stories_if_expired().await?;
+    let hn_db = hn_db.read().await;
 
     let keywords: Vec<String> = match input {
         web::Either::Left(web::Json(ref json)) => json.words.clone(),

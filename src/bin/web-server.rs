@@ -9,8 +9,6 @@ use googol::{
     settings::{GoogolConfig, Load, web_server::WebServerConfig},
 };
 use log::{debug, info, warn};
-use std::sync::Arc;
-use tokio::sync::Mutex;
 
 #[actix_web::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -56,7 +54,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .run()
     .await?;
 
-    hn_db_cloned.lock().await.save()?;
+    hn_db_cloned.read().await.save()?;
 
     Ok(())
 }

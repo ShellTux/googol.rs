@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap, error::Error, fmt, fs::File, io, path::Path, sync::Arc, time::SystemTime,
 };
-use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 use url::Url;
 
 static TOP_STORIES_N: usize = 10;
@@ -152,8 +152,8 @@ impl HackerNewsDBGuard {
     }
 
     pub fn new_safe(db: Self) -> HackerNewsDB {
-        Arc::new(Mutex::new(db))
+        Arc::new(RwLock::new(db))
     }
 }
 
-pub type HackerNewsDB = Arc<Mutex<HackerNewsDBGuard>>;
+pub type HackerNewsDB = Arc<RwLock<HackerNewsDBGuard>>;
