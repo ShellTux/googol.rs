@@ -3,10 +3,14 @@ use actix_web::{
     web::{self, Redirect},
 };
 use googol::{
-    debugv, routes,
+    debugv,
+    models::hackernews::HackerNewsDBGuard,
+    routes,
     settings::{GoogolConfig, Load, web_server::WebServerConfig},
 };
 use log::{debug, info, warn};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 #[actix_web::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -25,11 +29,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     info!("Starting web-server at {}...", settings.address);
 
+    let hn_db = HackerNewsDBGuard::new_safe(HackerNewsDBGuard::load()?);
+
+    let hn_db_cloned = hn_db.clone();
+
     HttpServer::new(move || {
         let gateway_address = settings.gateway_address;
 
         App::new()
             .app_data(web::Data::new(gateway_address))
+            .app_data(web::Data::new(hn_db.clone()))
             .wrap(middleware::Logger::default().log_target("@"))
             .wrap(middleware::Compress::default())
             .service(Redirect::new("/", "/home"))
@@ -39,11 +48,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .service(routes::enqueue::enqueue_post)
             .service(routes::search::search_get)
             .service(routes::search::search_post)
+            .service(routes::hackernews::hackernews_get)
+            .service(routes::hackernews::hackernews_post)
             .service(routes::ws::ws_handler)
     })
     .bind(settings.address)?
     .run()
     .await?;
+
+    hn_db_cloned.lock().await.save()?;
 
     Ok(())
 }

@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block title %}Search{% endblock %}
+
+{% block content %}
+<h1>Googol HackerNews Search</h1>
+<form method="post" action="/hackernews">
+    <div>
+        <label for="query">Search:</label>
+        <input type="text" id="query" name="query" placeholder="Type your query" required>
+    </div>
+    <button type="submit">Search</button>
+</form>
+{% if results %}
+    <h2>Top Stories:</h2>
+    <ul>
+        {% for result in results %}
+        <li>
+            <a href="{{ result.url }}" target="_blank">
+                {% if result.icon %}
+                <img src="{{ result.icon }}" alt="{{ result.title | default(value='Story icon') }} icon" style="width: 20px; height: 20px;" />
+                {% endif %}
+
+                {% if result.title %}
+                <strong>{{ result.title }}</strong>
+                {% endif %}
+            </a>
+
+            {% if result.summary %}
+            <p>{{ result.summary }}</p>
+            {% endif %}
+
+            {% if result.category %}
+            <span>Category: {{ result.category }}</span>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p>No results found. Please try a different query.</p>
+{% endif %}
+{% endblock %}

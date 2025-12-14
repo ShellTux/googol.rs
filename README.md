@@ -185,6 +185,9 @@ Endpoints:
 - /ws
   - GET
   - header must include WebSocket Upgrade
+- /hackernews
+  - GET
+  - POST
 
 ## Testing
 

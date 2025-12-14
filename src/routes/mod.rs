@@ -3,6 +3,7 @@ use std::net::SocketAddr;
 use tonic::transport::{Channel, Error};
 
 pub mod enqueue;
+pub mod hackernews;
 pub mod health;
 pub mod home;
 pub mod search;
