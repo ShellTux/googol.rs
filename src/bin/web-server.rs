@@ -49,6 +49,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .service(routes::hackernews::hackernews_get)
             .service(routes::hackernews::hackernews_post)
             .service(routes::ws::ws_handler)
+            .service(routes::user_agent::user_agent_get)
     })
     .bind(settings.address)?
     .run()

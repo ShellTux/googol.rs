@@ -7,6 +7,7 @@ pub mod hackernews;
 pub mod health;
 pub mod home;
 pub mod search;
+pub mod user_agent;
 pub mod ws;
 
 pub async fn get_grpc_client(
