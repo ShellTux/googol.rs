@@ -7,8 +7,7 @@ use crate::{
     tera::render_template,
 };
 use actix_web::{HttpRequest, HttpResponse, Responder, get, post, web};
-use log::debug;
-use serde_json::json;
+use log::{debug, error};
 use std::net::SocketAddr;
 use tera::Context;
 
@@ -42,35 +41,40 @@ async fn search_post(
     };
     debugv!(words);
 
-    let results = web::Json(match get_grpc_client(gateway_address).await {
-        Err(e) => json!({"error": e.to_string()}),
-        Ok(mut client) => {
-            let request = SearchRequest { words };
+    let results = match get_grpc_client(gateway_address).await {
+        Err(e) => {
+            error!("{}", e);
+            None
+        }
+        Ok(mut client) => match client.search(SearchRequest { words }).await {
+            Err(e) => {
+                error!("error: {}", e);
+                None
+            }
+            Ok(response) => {
+                let response = response.into_inner();
 
-            match client.search(request).await {
-                Err(e) => json!({"error": e.to_string()}),
-                Ok(response) => {
-                    let response = response.into_inner();
+                use Status::{AlreadyIndexedUrl, Error, InvalidUrl, Success, UnavailableBarrels};
 
-                    match response.status() {
-                        Status::Success => {
-                            let results: Vec<page::web_server::Page> = response
-                                .pages
-                                .iter()
-                                .cloned()
-                                .map(page::web_server::Page::from)
-                                .collect();
+                match response.status() {
+                    Error | InvalidUrl | AlreadyIndexedUrl | UnavailableBarrels => todo!(),
+                    Success => {
+                        let results: Vec<page::web_server::Page> = response
+                            .pages
+                            .iter()
+                            .cloned()
+                            .map(page::web_server::Page::from)
+                            .collect();
 
-                            debug!("{:#?}", results);
+                        debug!("{:#?}", results);
 
-                            json!(results)
-                        }
-                        _ => json!({"error": "Error searching"}),
+                        Some(results)
                     }
                 }
             }
-        }
-    });
+        },
+    }
+    .unwrap_or(vec![]);
     debugv!(results);
 
     context.insert("results", &results);
