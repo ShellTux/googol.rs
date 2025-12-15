@@ -1320,6 +1320,7 @@ dependencies = [
  "serde_yml",
  "tera",
  "tokio",
+ "tokio-stream",
  "toml",
  "tonic",
  "tonic-build",
