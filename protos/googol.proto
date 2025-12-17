@@ -52,8 +52,13 @@ message Index {
   repeated string outlinks = 3;
 }
 
+message TopSearch {
+  string search = 1;
+  fixed64 count = 2;
+}
+
 message RealTimeStatusResponse {
-  repeated string top10_searches = 1;
+  repeated TopSearch top10_searches = 1;
   repeated BarrelStatus barrels = 2;
   float avg_response_time_ms = 3;
   repeated string queue = 4;

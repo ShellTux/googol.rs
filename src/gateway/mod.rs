@@ -13,7 +13,7 @@ use crate::{
         DequeueRequest, DequeueResponse, EnqueueRequest, EnqueueResponse, GatewayStatusRequest,
         GatewayStatusResponse, HealthRequest, HealthResponse, IndexRequest, IndexResponse,
         OutlinksRequest, OutlinksResponse, RealTimeStatusRequest, RealTimeStatusResponse,
-        RequestIndexRequest, RequestIndexResponse, SearchRequest, SearchResponse,
+        RequestIndexRequest, RequestIndexResponse, SearchRequest, SearchResponse, TopSearch,
         gateway_service_server::GatewayService,
     },
     settings::gateway::GatewayConfig,
@@ -452,8 +452,10 @@ impl GatewayService for Gateway {
             .top_searches
             .top_n(10)
             .iter()
-            .map(|(word, _)| word)
-            .cloned()
+            .map(|(word, count)| TopSearch {
+                search: word.clone(),
+                count: *count as u64,
+            })
             .collect();
 
         Ok(Response::new(RealTimeStatusResponse {

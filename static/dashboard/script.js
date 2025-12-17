@@ -6,11 +6,17 @@
  */
 
 /**
+ * @typedef {Object} TopSearch
+ * @property {string} search - Search
+ * @property {number} count - count of search
+ */
+
+/**
  * @typedef {Object} WsResponse
  * @property {number} avg_response_time_ms - Average response time in miliseconds
  * @property {[Barrel]} barrels - barrells statuses
  * @property {[string]} queue - Queue of urls
- * @property {[string]} top10_searches - Top 10 Searches
+ * @property {[TopSearch]} top10_searches - Top 10 Searches
  */
 
 class DashboardElements {
@@ -127,7 +133,7 @@ class DashboardElements {
 
     // Update top 10 searches list
     this.topSearchesList.innerHTML = top10_searches.length == 0 ? 'No searches available' :
-      top10_searches.map(search => `<li>${search}</li>`).join('\n');
+      top10_searches.map(({ search, count }) => `<li>(${count}) ${search}</li>`).join('\n');
   }
 }
 

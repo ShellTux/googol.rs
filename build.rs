@@ -1,5 +1,10 @@
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    tonic_build::compile_protos("protos/googol.proto")?;
-    tonic_build::compile_protos("protos/helloworld.proto")?;
+    tonic_build::configure()
+        .type_attribute(
+            "TopSearch",
+            "#[derive(serde::Deserialize, serde::Serialize)]",
+        )
+        .compile_protos(&["protos/googol.proto", "protos/helloworld.proto"], &["."])
+        .unwrap_or_else(|e| panic!("protobuf compile error: {}", e));
     Ok(())
 }

@@ -1,9 +1,7 @@
+use crate::top_searches::TopSearches;
 use std::collections::VecDeque;
-
 use tokio::time::Instant;
 use url::Url;
-
-use crate::top_searches::TopSearches;
 
 #[derive(Debug, Default)]
 pub struct Queue(VecDeque<Url>);
