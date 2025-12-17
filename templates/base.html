@@ -4,18 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %} Googol {% endblock %}</title>
-    <script>
-        function splitInput(inputField) {
-            const itemsArray = inputField.value.trim().split(/\s+/); // Split by whitespace
-            inputField.value = itemsArray.join(','); // Join with a comma for submission
-        }
-    </script>
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
     <link rel="manifest" href="/static/site.webmanifest">
     <link rel="stylesheet" href="/static/style.css">
+    {% block extrahead %}{% endblock %}
 </head>
 <body>
     <header>
@@ -23,6 +18,7 @@
         <nav>
             <ul>
                 <li><a href="/">Home</a></li>
+                <li><a href="/dashboard">Dashboard</a></li>
                 <li><a href="/enqueue">Enqueue</a></li>
                 <li><a href="/search">Search</a></li>
                 <li><a href="/hackernews">HackerNews</a></li>
@@ -37,5 +33,6 @@
     <footer>
         <p>&copy; 2025 Luís Góis SD Googol</p>
     </footer>
+    {% block scripts %}{% endblock %}
 </body>
 </html>

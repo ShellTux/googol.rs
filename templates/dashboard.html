@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %} System Status Dashboard {% endblock %}
+
+{% block extrahead %}
+<style>
+.highlight-yes {
+  color: green;
+  padding: 12px;
+}
+
+.highlight-no {
+  color: red;
+  padding: 12px;
+}
+</style>
+
+{% endblock %}
+
+{% block content %}
+<table>
+  <thead>
+    <tr>
+      <th>WebSocket Connected?</th>
+      <th>Average Response Time (ms)</th>
+      <th>Barrels</th>
+      <th>Queue</th>
+      <th>Top 10 Searches</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td id="td-ws" class="highlight-no">No</td>
+      <td id="td-avg-response-time">...</td>
+      <td>
+        <ul id="ul-barrels">...</ul>
+      </td>
+      <td>
+        <ol id="ol-queue">...</ul>
+      </td>
+      <td>
+        <ol id="ol-search">...</ol>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<script src="/static/dashboard/script.js"></script>
+
+{% endblock %}

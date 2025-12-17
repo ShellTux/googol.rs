@@ -2,6 +2,7 @@ use crate::proto::gateway_service_client::GatewayServiceClient;
 use std::net::SocketAddr;
 use tonic::transport::{Channel, Error};
 
+pub mod dashboard;
 pub mod enqueue;
 pub mod hackernews;
 pub mod health;

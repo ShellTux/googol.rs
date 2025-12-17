@@ -44,21 +44,18 @@ async fn search_post(
     let results = match get_grpc_client(gateway_address).await {
         Err(e) => {
             error!("{}", e);
-            None
+            Err(format!("error connecting to {}: {}", gateway_address, e))
         }
         Ok(mut client) => match client.search(SearchRequest { words }).await {
             Err(e) => {
                 error!("error: {}", e);
-                None
+                Err(format!("error rpc call search: {}", e))
             }
             Ok(response) => {
                 let response = response.into_inner();
 
-                use Status::{AlreadyIndexedUrl, Error, InvalidUrl, Success, UnavailableBarrels};
-
                 match response.status() {
-                    Error | InvalidUrl | AlreadyIndexedUrl | UnavailableBarrels => todo!(),
-                    Success => {
+                    Status::Success => {
                         let results: Vec<page::web_server::Page> = response
                             .pages
                             .iter()
@@ -68,16 +65,19 @@ async fn search_post(
 
                         debug!("{:#?}", results);
 
-                        Some(results)
+                        Ok(results)
                     }
+                    e => Err(format!("SearchResponse status: {:?}", e)),
                 }
             }
         },
-    }
-    .unwrap_or(vec![]);
+    };
     debugv!(results);
 
-    context.insert("results", &results);
+    match &results {
+        Ok(results) => context.insert("results", results),
+        Err(err) => context.insert("error", err),
+    }
 
     match input {
         web::Either::Left(web::Json(_)) => HttpResponse::Ok().json(results),
