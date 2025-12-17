@@ -25,8 +25,9 @@
 //!
 //! Supports loading existing index data from files.
 
+use crate::bytes::Bytes;
 use crate::page::Page;
-use log::error;
+use log::{debug, error};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
@@ -108,7 +109,7 @@ pub struct IndexStore {
     filepath: PathBuf,
     /// Size of the serialized index in bytes.
     #[serde(skip)]
-    size_bytes: usize,
+    size_bytes: Bytes,
 }
 
 impl IndexStore {
@@ -158,7 +159,13 @@ impl IndexStore {
                 })?;
 
                 index_store.filepath = filepath.as_ref().to_path_buf();
-                index_store.size_bytes = size;
+                index_store.size_bytes = Bytes(size);
+
+                debug!(
+                    "Loaded {} from {}",
+                    index_store.size_bytes,
+                    filepath.as_ref().display()
+                );
 
                 Ok(index_store)
             }
@@ -334,7 +341,7 @@ impl IndexStore {
 
         match File::create(&self.filepath)?.write(json.as_bytes()) {
             Ok(size) => {
-                self.size_bytes = size;
+                self.size_bytes = Bytes(size);
                 Ok(size)
             }
             Err(e) => {

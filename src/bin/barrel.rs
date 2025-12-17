@@ -23,7 +23,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     debugv!(settings, debug);
 
     let barrel = Barrel::new(&settings).await;
-    debugv!(barrel, debug);
 
     info!("Barrel listening at {}...", barrel.address);
 
