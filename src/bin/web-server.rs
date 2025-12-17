@@ -39,6 +39,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .app_data(web::Data::new(hn_db.clone()))
             .wrap(middleware::Logger::default().log_target("@"))
             .wrap(middleware::Compress::default())
+            .service(actix_files::Files::new("/static", "./static"))
             .service(Redirect::new("/", "/home"))
             .service(routes::home::home_get)
             .service(routes::health::health_get)
