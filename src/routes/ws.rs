@@ -53,21 +53,7 @@ async fn ws_handler(
                                                 client.real_time_status(request).await.unwrap();
                                             let response = response.into_inner();
 
-                                            let json = json!({
-                                                "top10_searches": response.top10_searches,
-                                                "avg_response_time_ms": response.avg_response_time_ms,
-                                                "barrels": response
-                                                    .barrels
-                                                    .iter()
-                                                    .map(|barrel| {
-                                                        json!({
-                                                            "online": barrel.online,
-                                                            "address": barrel.address,
-                                                            "index_size_bytes": barrel.index_size_bytes,
-                                                        })
-                                                    }).collect::<Vec<_>>(),
-                                                "queue": response.queue,
-                                            });
+                                            let json = json!(response);
                                             debug!("{:#?}", json);
 
                                             session.text(json.to_string()).await.unwrap();
